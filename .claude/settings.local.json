@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ':*)",
+      "Bash(python3)",
+      "WebFetch(domain:www.claudeusercontent.com)",
+      "Bash(open \"/Users/sn/project/sales-tool/app.html\")"
+    ]
+  }
+}
