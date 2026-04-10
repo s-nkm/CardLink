@@ -1040,6 +1040,7 @@ function setStep(n) {
 }
 
 async function startAnalysis() {
+  suggestAccepted = false;
   document.getElementById('step1').style.display = 'none';
   document.getElementById('step2').classList.add('visible');
   setStep(2);
@@ -1130,7 +1131,10 @@ function field(label, key, val) {
   </div>`;
 }
 
+let suggestAccepted = false;
+
 function acceptSuggest() {
+  suggestAccepted = true;
   showToast('✅ 会場情報を採用しました');
   document.getElementById('location-suggest').style.opacity = '0.5';
 }
@@ -1143,7 +1147,9 @@ async function saveAll() {
     const inputs = card.querySelectorAll('.form-input');
     const obj = {};
     inputs.forEach(i => obj[i.dataset.key] = i.value);
-    const suggest = document.getElementById('suggest-place').textContent + ' / ' + document.getElementById('suggest-event').textContent;
+    const suggest = suggestAccepted
+      ? document.getElementById('suggest-place').textContent + ' / ' + document.getElementById('suggest-event').textContent
+      : '';
     const today = new Date().toISOString().split('T')[0];
     newContacts.push({
       id: String(Date.now()) + String(idx),
@@ -1165,18 +1171,20 @@ async function saveAll() {
   });
 
   contacts = [...newContacts, ...contacts];
-  renderContacts(contacts);
   showToast(`✅ ${newContacts.length}件を登録しました`);
-  setTimeout(() => showPage('home'), 1200);
+  setTimeout(() => {
+    renderContacts(contacts);
+    showPage('home');
+  }, 1200);
 
-  // GASにバックグラウンド保存
+  // GASにバックグラウンド保存（UIをブロックしない）
   const gasUrl = getGasUrl();
   if (gasUrl) {
-    showToast('☁️ Sheetsに保存中...');
-    const results = await Promise.all(newContacts.map(c => saveContactToGAS(c)));
-    const saved = results.filter(Boolean).length;
-    if (saved > 0) showToast(`☁️ ${saved}件をSheetsに保存しました`);
-    else showToast('⚠️ Sheets保存に失敗しました（ローカルには保存済み）');
+    Promise.all(newContacts.map(c => saveContactToGAS(c))).then(results => {
+      const saved = results.filter(Boolean).length;
+      if (saved > 0) showToast(`☁️ Sheetsに保存しました`);
+      else showToast('⚠️ Sheets保存失敗（ローカルには保存済み）');
+    });
   }
 }
 
