@@ -1,932 +1,1608 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>CardLink - 営業支援アプリ</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0d0f14;
-    --surface: #161920;
-    --surface2: #1e2230;
-    --border: #2a2f3e;
-    --accent: #4fffb0;
-    --accent2: #7b8cff;
-    --text: #e8eaf2;
-    --text-dim: #6b7290;
-    --text-mid: #9ba3c2;
-    --danger: #ff6b6b;
-    --warn: #ffb347;
-    --radius: 16px;
-    --radius-sm: 10px;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Noto Sans JP', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 0;
-  }
-
-  .app-shell {
-    width: 100%;
-    max-width: 430px;
-    min-height: 100vh;
-    background: var(--bg);
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── Header ── */
-  .header {
-    padding: 52px 20px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: linear-gradient(180deg, var(--bg) 80%, transparent);
-  }
-  .header-logo {
-    font-family: 'Space Mono', monospace;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-  }
-  .header-logo span { color: var(--accent); }
-  .header-actions { display: flex; gap: 10px; }
-  .icon-btn {
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-mid);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all 0.2s;
-    font-size: 16px;
-  }
-  .icon-btn:hover { background: var(--border); color: var(--text); }
-
-  /* ── Pages ── */
-  .page { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding-bottom: 90px; }
-  .page.active { display: flex; }
-
-  /* ── Bottom Nav ── */
-  .bottom-nav {
-    position: fixed;
-    bottom: 0; left: 50%;
-    transform: translateX(-50%);
-    width: 100%; max-width: 430px;
-    background: rgba(22,25,32,0.92);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border);
-    display: flex;
-    padding: 10px 0 24px;
-    z-index: 100;
-  }
-  .nav-item {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; gap: 4px;
-    cursor: pointer; transition: all 0.2s;
-    padding: 4px 0;
-    color: var(--text-dim);
-    font-size: 10px;
-    letter-spacing: 0.5px;
-  }
-  .nav-item .nav-icon { font-size: 20px; transition: transform 0.2s; }
-  .nav-item.active { color: var(--accent); }
-  .nav-item.active .nav-icon { transform: translateY(-2px); }
-
-  /* ── HOME PAGE ── */
-  .search-bar {
-    margin: 8px 20px 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px;
-  }
-  .search-bar input {
-    flex: 1; background: none; border: none; outline: none;
-    color: var(--text); font-size: 14px; font-family: inherit;
-  }
-  .search-bar input::placeholder { color: var(--text-dim); }
-
-  .section-label {
-    font-size: 11px; font-weight: 500; letter-spacing: 1.5px;
-    color: var(--text-dim); text-transform: uppercase;
-    padding: 0 20px; margin-bottom: 12px;
-  }
-
-  .tags-row {
-    display: flex; gap: 8px; padding: 0 20px;
-    overflow-x: auto; margin-bottom: 20px;
-    scrollbar-width: none;
-  }
-  .tag {
-    flex-shrink: 0; padding: 6px 14px;
-    border-radius: 20px; font-size: 12px;
-    border: 1px solid var(--border);
-    color: var(--text-mid); cursor: pointer;
-    transition: all 0.2s; background: var(--surface);
-  }
-  .tag.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
-
-  .contact-list { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
-
-  .contact-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    display: flex; align-items: center; gap: 14px;
-    cursor: pointer; transition: all 0.2s;
-    position: relative; overflow: hidden;
-  }
-  .contact-card::before {
-    content: '';
-    position: absolute; left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: var(--accent2);
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-  .contact-card:hover::before { opacity: 1; }
-  .contact-card:hover { background: var(--surface2); transform: translateX(2px); }
-
-  .avatar {
-    width: 46px; height: 46px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; font-weight: 700; flex-shrink: 0;
-  }
-  .av-green { background: rgba(79,255,176,0.15); color: var(--accent); }
-  .av-blue { background: rgba(123,140,255,0.15); color: var(--accent2); }
-  .av-orange { background: rgba(255,179,71,0.15); color: var(--warn); }
-  .av-red { background: rgba(255,107,107,0.15); color: var(--danger); }
-
-  .contact-info { flex: 1; min-width: 0; }
-  .contact-name { font-size: 15px; font-weight: 500; margin-bottom: 2px; }
-  .contact-company { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .contact-meta { display: flex; gap: 6px; margin-top: 6px; }
-  .meta-badge {
-    font-size: 10px; padding: 2px 8px; border-radius: 10px;
-    background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border);
-  }
-  .meta-badge.hot { background: rgba(255,107,107,0.1); color: var(--danger); border-color: rgba(255,107,107,0.3); }
-  .meta-badge.warm { background: rgba(255,179,71,0.1); color: var(--warn); border-color: rgba(255,179,71,0.3); }
-
-  .contact-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-  .contact-date { font-size: 11px; color: var(--text-dim); }
-
-  /* FAB */
-  .fab {
-    position: fixed;
-    bottom: 90px; right: calc(50% - 215px + 20px);
-    width: 56px; height: 56px;
-    background: var(--accent);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; color: #000;
-    box-shadow: 0 4px 24px rgba(79,255,176,0.4);
-    cursor: pointer; transition: all 0.2s;
-    z-index: 50;
-  }
-  .fab:hover { transform: scale(1.08); box-shadow: 0 6px 32px rgba(79,255,176,0.5); }
-
-  /* ── OCR PAGE ── */
-  .ocr-steps { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-
-  .step-indicator {
-    display: flex; align-items: center; gap: 0;
-    margin-bottom: 8px;
-  }
-  .step-dot {
-    width: 28px; height: 28px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700;
-    background: var(--surface2); color: var(--text-dim);
-    border: 1px solid var(--border);
-    position: relative; z-index: 1;
-    transition: all 0.3s;
-  }
-  .step-dot.active { background: var(--accent); color: #000; border-color: var(--accent); }
-  .step-dot.done { background: rgba(79,255,176,0.2); color: var(--accent); border-color: var(--accent); }
-  .step-line { flex: 1; height: 1px; background: var(--border); }
-  .step-line.done { background: var(--accent); }
-
-  .upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 48px 20px;
-    text-align: center;
-    cursor: pointer; transition: all 0.3s;
-    background: var(--surface);
-    position: relative; overflow: hidden;
-  }
-  .upload-zone:hover, .upload-zone.dragover {
-    border-color: var(--accent);
-    background: rgba(79,255,176,0.04);
-  }
-  .upload-zone input[type=file] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer;
-  }
-  .upload-icon { font-size: 48px; margin-bottom: 12px; }
-  .upload-text { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
-  .upload-sub { font-size: 12px; color: var(--text-dim); }
-
-  .preview-zone {
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    display: none;
-  }
-  .preview-zone img { width: 100%; max-height: 220px; object-fit: cover; }
-  .preview-footer {
-    padding: 12px 16px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .preview-footer span { font-size: 13px; color: var(--text-mid); }
-
-  .btn {
-    width: 100%; padding: 16px;
-    border-radius: var(--radius); border: none;
-    font-family: inherit; font-size: 15px; font-weight: 700;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .btn-primary { background: var(--accent); color: #000; }
-  .btn-primary:hover { background: #6fffbf; }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-secondary {
-    background: var(--surface2); color: var(--text-mid);
-    border: 1px solid var(--border);
-  }
-  .btn-sm {
-    padding: 9px 20px; font-size: 13px; border-radius: var(--radius-sm);
-    width: auto;
-  }
-
-  /* AI解析中アニメーション */
-  .analyzing-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 32px 20px; text-align: center;
-    display: none;
-  }
-  .analyzing-box.visible { display: block; }
-  .pulse-ring {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: rgba(79,255,176,0.1);
-    border: 2px solid var(--accent);
-    margin: 0 auto 16px;
-    display: flex; align-items: center; justify-content: center;
-    animation: pulse 1.5s ease-in-out infinite;
-    font-size: 24px;
-  }
-  @keyframes pulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(79,255,176,0.3); }
-    50% { box-shadow: 0 0 0 16px rgba(79,255,176,0); }
-  }
-  .analyzing-text { font-size: 14px; color: var(--text-mid); }
-  .analyzing-sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
-
-  /* 解析結果フォーム */
-  .result-cards { display: none; flex-direction: column; gap: 10px; }
-  .result-cards.visible { display: flex; }
-
-  .result-card {
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    border-radius: var(--radius);
-    padding: 18px;
-    position: relative;
-  }
-  .result-card-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px;
-  }
-  .result-card-title { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; }
-  .confidence-badge {
-    font-size: 10px; padding: 3px 10px; border-radius: 10px;
-    background: rgba(79,255,176,0.1); color: var(--accent);
-    border: 1px solid rgba(79,255,176,0.3);
-  }
-
-  .form-row { margin-bottom: 12px; }
-  .form-label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; letter-spacing: 0.5px; }
-  .form-input {
-    width: 100%; background: var(--surface2);
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 10px 14px; font-family: inherit; font-size: 14px;
-    color: var(--text); outline: none; transition: border-color 0.2s;
-  }
-  .form-input:focus { border-color: var(--accent2); }
-  .form-input.edited { border-color: var(--warn); }
-
-  .location-suggest {
-    background: rgba(123,140,255,0.08);
-    border: 1px solid rgba(123,140,255,0.3);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    display: flex; align-items: flex-start; gap: 10px;
-    margin-bottom: 12px;
-  }
-  .location-suggest-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-  .location-suggest-body { flex: 1; }
-  .location-suggest-label { font-size: 10px; color: var(--accent2); letter-spacing: 1px; margin-bottom: 2px; }
-  .location-suggest-text { font-size: 13px; color: var(--text); }
-  .location-suggest-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-
-  /* ── DETAIL PAGE ── */
-  .detail-hero {
-    padding: 24px 20px;
-    background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 16px;
-  }
-  .detail-avatar {
-    width: 64px; height: 64px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; font-weight: 700;
-    background: rgba(79,255,176,0.15); color: var(--accent);
-    border: 2px solid rgba(79,255,176,0.3);
-    flex-shrink: 0;
-  }
-  .detail-name { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
-  .detail-position { font-size: 13px; color: var(--accent2); margin-bottom: 2px; }
-  .detail-company { font-size: 14px; color: var(--text-mid); }
-
-  .detail-actions {
-    display: flex; gap: 10px; padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .action-btn {
-    flex: 1; padding: 12px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--surface); border: 1px solid var(--border);
-    color: var(--text-mid); font-size: 11px;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .action-btn .ab-icon { font-size: 18px; }
-  .action-btn:hover { background: var(--surface2); color: var(--text); }
-  .action-btn.primary { background: rgba(79,255,176,0.1); border-color: rgba(79,255,176,0.3); color: var(--accent); }
-
-  .detail-section { padding: 20px; border-bottom: 1px solid var(--border); }
-  .detail-section-title { font-size: 11px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 14px; }
-
-  .info-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
-  .info-icon { font-size: 16px; flex-shrink: 0; width: 20px; margin-top: 1px; }
-  .info-label { font-size: 11px; color: var(--text-dim); margin-bottom: 1px; }
-  .info-value { font-size: 14px; color: var(--text); }
-
-  .memo-list { display: flex; flex-direction: column; gap: 10px; }
-  .memo-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-  }
-  .memo-date { font-size: 10px; color: var(--accent2); font-family: 'Space Mono', monospace; margin-bottom: 6px; }
-  .memo-text { font-size: 13px; color: var(--text); line-height: 1.6; }
-
-  .add-memo-area {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    margin-top: 10px;
-  }
-  .add-memo-area textarea {
-    width: 100%; background: none; border: none; outline: none;
-    font-family: inherit; font-size: 13px; color: var(--text);
-    resize: none; min-height: 60px;
-  }
-  .add-memo-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
-
-  /* ── MAIL PAGE ── */
-  .mail-section { padding: 20px; }
-  .mail-select-contact {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px; display: flex; align-items: center; gap: 12px;
-    margin-bottom: 16px; cursor: pointer;
-    transition: all 0.2s;
-  }
-  .mail-select-contact:hover { border-color: var(--accent2); }
-
-  .mail-type-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 10px; margin-bottom: 16px;
-  }
-  .mail-type-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px 12px;
-    text-align: center; cursor: pointer; transition: all 0.2s;
-  }
-  .mail-type-btn:hover { border-color: var(--accent2); }
-  .mail-type-btn.selected { border-color: var(--accent); background: rgba(79,255,176,0.06); }
-  .mail-type-icon { font-size: 22px; margin-bottom: 6px; }
-  .mail-type-label { font-size: 12px; color: var(--text-mid); }
-
-  .mail-prompt-area {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px; margin-bottom: 16px;
-  }
-  .mail-prompt-area textarea {
-    width: 100%; background: none; border: none; outline: none;
-    font-family: inherit; font-size: 14px; color: var(--text);
-    resize: none; min-height: 80px;
-  }
-  .mail-prompt-label { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; letter-spacing: 0.5px; }
-
-  .generated-mail {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 18px; display: none;
-  }
-  .generated-mail.visible { display: block; }
-  .mail-subject { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
-  .mail-body { font-size: 13px; color: var(--text); line-height: 1.8; white-space: pre-wrap; }
-  .mail-footer-actions { display: flex; gap: 10px; margin-top: 14px; }
-
-  /* ── SETTINGS ── */
-  .settings-section { padding: 20px; }
-  .settings-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .settings-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
-  .settings-group {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden; margin-bottom: 16px;
-  }
-  .settings-item {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: 6px;
-  }
-  .settings-item:last-child { border-bottom: none; }
-  .settings-item-label { font-size: 12px; color: var(--text-dim); }
-  .settings-item input {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    font-family: inherit; font-size: 13px; color: var(--text);
-    outline: none; width: 100%;
-  }
-  .settings-item input:focus { border-color: var(--accent); }
-  .settings-status {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; padding: 6px 0;
-  }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .status-dot.ok { background: var(--accent); }
-  .status-dot.err { background: var(--danger); }
-  .status-dot.idle { background: var(--text-dim); }
-
-  /* toast */
-  .toast {
-    position: fixed; top: 60px; left: 50%;
-    transform: translateX(-50%) translateY(-10px);
-    background: var(--surface2); border: 1px solid var(--accent);
-    color: var(--accent); border-radius: 20px;
-    padding: 10px 20px; font-size: 13px;
-    opacity: 0; transition: all 0.3s; z-index: 999;
-    pointer-events: none;
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-  /* scroll */
-  ::-webkit-scrollbar { width: 0; }
-
-  @media (min-width: 431px) {
-    body { background: #080a0e; padding: 20px 0; }
-    .app-shell {
-      border: 1px solid var(--border);
-      border-radius: 28px;
-      overflow: hidden;
-      box-shadow: 0 0 80px rgba(0,0,0,0.8);
-      min-height: calc(100vh - 40px);
-      max-height: 900px;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>CardLink - 営業支援アプリ</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #161920;
+      --surface2: #1e2230;
+      --border: #2a2f3e;
+      --accent: #4fffb0;
+      --accent2: #7b8cff;
+      --text: #e8eaf2;
+      --text-dim: #6b7290;
+      --text-mid: #9ba3c2;
+      --danger: #ff6b6b;
+      --warn: #ffb347;
+      --radius: 16px;
+      --radius-sm: 10px;
     }
-    .fab { right: calc(50% - 215px + 20px); }
-  }
-</style>
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 0;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .header {
+      padding: 52px 20px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(180deg, var(--bg) 80%, transparent);
+    }
+
+    .header-logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .header-logo span {
+      color: var(--accent);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-mid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 16px;
+    }
+
+    .icon-btn:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    /* ── Pages ── */
+    .page {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 90px;
+    }
+
+    .page.active {
+      display: flex;
+    }
+
+    /* ── Bottom Nav ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 430px;
+      background: rgba(22, 25, 32, 0.92);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 10px 0 24px;
+      z-index: 100;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      padding: 4px 0;
+      color: var(--text-dim);
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-item .nav-icon {
+      font-size: 20px;
+      transition: transform 0.2s;
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+    }
+
+    .nav-item.active .nav-icon {
+      transform: translateY(-2px);
+    }
+
+    /* ── HOME PAGE ── */
+    .search-bar {
+      margin: 8px 20px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .search-bar input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      padding: 0 20px;
+      margin-bottom: 12px;
+    }
+
+    .tags-row {
+      display: flex;
+      gap: 8px;
+      padding: 0 20px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+      scrollbar-width: none;
+    }
+
+    .tag {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      color: var(--text-mid);
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface);
+    }
+
+    .tag.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .contact-list {
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .contact-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .contact-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--accent2);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .contact-card:hover::before {
+      opacity: 1;
+    }
+
+    .contact-card:hover {
+      background: var(--surface2);
+      transform: translateX(2px);
+    }
+
+    .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .av-green {
+      background: rgba(79, 255, 176, 0.15);
+      color: var(--accent);
+    }
+
+    .av-blue {
+      background: rgba(123, 140, 255, 0.15);
+      color: var(--accent2);
+    }
+
+    .av-orange {
+      background: rgba(255, 179, 71, 0.15);
+      color: var(--warn);
+    }
+
+    .av-red {
+      background: rgba(255, 107, 107, 0.15);
+      color: var(--danger);
+    }
+
+    .contact-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .contact-name {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .contact-company {
+      font-size: 12px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .contact-meta {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .meta-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .meta-badge.hot {
+      background: rgba(255, 107, 107, 0.1);
+      color: var(--danger);
+      border-color: rgba(255, 107, 107, 0.3);
+    }
+
+    .meta-badge.warm {
+      background: rgba(255, 179, 71, 0.1);
+      color: var(--warn);
+      border-color: rgba(255, 179, 71, 0.3);
+    }
+
+    .contact-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .contact-date {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* FAB */
+    .fab {
+      position: fixed;
+      bottom: 90px;
+      right: calc(50% - 215px + 20px);
+      width: 56px;
+      height: 56px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #000;
+      box-shadow: 0 4px 24px rgba(79, 255, 176, 0.4);
+      cursor: pointer;
+      transition: all 0.2s;
+      z-index: 50;
+    }
+
+    .fab:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 32px rgba(79, 255, 176, 0.5);
+    }
+
+    /* ── OCR PAGE ── */
+    .ocr-steps {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 8px;
+    }
+
+    .step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+
+    .step-dot.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    .step-dot.done {
+      background: rgba(79, 255, 176, 0.2);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .step-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .step-line.done {
+      background: var(--accent);
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(79, 255, 176, 0.04);
+    }
+
+    .upload-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .upload-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .upload-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .preview-zone {
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: none;
+    }
+
+    .preview-zone img {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+    }
+
+    .preview-footer {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .preview-footer span {
+      font-size: 13px;
+      color: var(--text-mid);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: var(--radius);
+      border: none;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background: #6fffbf;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text-mid);
+      border: 1px solid var(--border);
+    }
+
+    .btn-sm {
+      padding: 9px 20px;
+      font-size: 13px;
+      border-radius: var(--radius-sm);
+      width: auto;
+    }
+
+    /* AI解析中アニメーション */
+    .analyzing-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 20px;
+      text-align: center;
+      display: none;
+    }
+
+    .analyzing-box.visible {
+      display: block;
+    }
+
+    .pulse-ring {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(79, 255, 176, 0.1);
+      border: 2px solid var(--accent);
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 1.5s ease-in-out infinite;
+      font-size: 24px;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(79, 255, 176, 0.3);
+      }
+
+      50% {
+        box-shadow: 0 0 0 16px rgba(79, 255, 176, 0);
+      }
+    }
+
+    .analyzing-text {
+      font-size: 14px;
+      color: var(--text-mid);
+    }
+
+    .analyzing-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    /* 解析結果フォーム */
+    .result-cards {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .result-cards.visible {
+      display: flex;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 18px;
+      position: relative;
+    }
+
+    .result-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .result-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .confidence-badge {
+      font-size: 10px;
+      padding: 3px 10px;
+      border-radius: 10px;
+      background: rgba(79, 255, 176, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(79, 255, 176, 0.3);
+    }
+
+    .form-row {
+      margin-bottom: 12px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent2);
+    }
+
+    .form-input.edited {
+      border-color: var(--warn);
+    }
+
+    .location-suggest {
+      background: rgba(123, 140, 255, 0.08);
+      border: 1px solid rgba(123, 140, 255, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .location-suggest-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .location-suggest-body {
+      flex: 1;
+    }
+
+    .location-suggest-label {
+      font-size: 10px;
+      color: var(--accent2);
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+
+    .location-suggest-text {
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .location-suggest-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* ── DETAIL PAGE ── */
+    .detail-hero {
+      padding: 24px 20px;
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .detail-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 700;
+      background: rgba(79, 255, 176, 0.15);
+      color: var(--accent);
+      border: 2px solid rgba(79, 255, 176, 0.3);
+      flex-shrink: 0;
+    }
+
+    .detail-name {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .detail-position {
+      font-size: 13px;
+      color: var(--accent2);
+      margin-bottom: 2px;
+    }
+
+    .detail-company {
+      font-size: 14px;
+      color: var(--text-mid);
+    }
+
+    .detail-actions {
+      display: flex;
+      gap: 10px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 12px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-mid);
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn .ab-icon {
+      font-size: 18px;
+    }
+
+    .action-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .action-btn.primary {
+      background: rgba(79, 255, 176, 0.1);
+      border-color: rgba(79, 255, 176, 0.3);
+      color: var(--accent);
+    }
+
+    .detail-section {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-section-title {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .info-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      width: 20px;
+      margin-top: 1px;
+    }
+
+    .info-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 1px;
+    }
+
+    .info-value {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .memo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .memo-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+
+    .memo-date {
+      font-size: 10px;
+      color: var(--accent2);
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 6px;
+    }
+
+    .memo-text {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .add-memo-area {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+
+    .add-memo-area textarea {
+      width: 100%;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      resize: none;
+      min-height: 60px;
+    }
+
+    .add-memo-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    /* ── MAIL PAGE ── */
+    .mail-section {
+      padding: 20px;
+    }
+
+    .mail-select-contact {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mail-select-contact:hover {
+      border-color: var(--accent2);
+    }
+
+    .mail-type-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .mail-type-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mail-type-btn:hover {
+      border-color: var(--accent2);
+    }
+
+    .mail-type-btn.selected {
+      border-color: var(--accent);
+      background: rgba(79, 255, 176, 0.06);
+    }
+
+    .mail-type-icon {
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    .mail-type-label {
+      font-size: 12px;
+      color: var(--text-mid);
+    }
+
+    .mail-prompt-area {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .mail-prompt-area textarea {
+      width: 100%;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      resize: none;
+      min-height: 80px;
+    }
+
+    .mail-prompt-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .generated-mail {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: none;
+    }
+
+    .generated-mail.visible {
+      display: block;
+    }
+
+    .mail-subject {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .mail-body {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    .mail-footer-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    /* ── SETTINGS ── */
+    .settings-section {
+      padding: 20px;
+    }
+
+    .settings-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .settings-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+    }
+
+    .settings-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .settings-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .settings-item:last-child {
+      border-bottom: none;
+    }
+
+    .settings-item-label {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .settings-item input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      width: 100%;
+    }
+
+    .settings-item input:focus {
+      border-color: var(--accent);
+    }
+
+    .settings-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 6px 0;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.ok {
+      background: var(--accent);
+    }
+
+    .status-dot.err {
+      background: var(--danger);
+    }
+
+    .status-dot.idle {
+      background: var(--text-dim);
+    }
+
+    /* toast */
+    .toast {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 10px 20px;
+      font-size: 13px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* scroll */
+    ::-webkit-scrollbar {
+      width: 0;
+    }
+
+    @media (min-width: 431px) {
+      body {
+        background: #080a0e;
+        padding: 20px 0;
+      }
+
+      .app-shell {
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 0 80px rgba(0, 0, 0, 0.8);
+        min-height: calc(100vh - 40px);
+        max-height: 900px;
+      }
+
+      .fab {
+        right: calc(50% - 215px + 20px);
+      }
+    }
+  </style>
 </head>
+
 <body>
-<div class="app-shell">
+  <div class="app-shell">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="header-logo">Card<span>Link</span></div>
-    <div class="header-actions">
-      <div class="icon-btn" onclick="showPage('settings')">⚙️</div>
-    </div>
-  </div>
-
-  <!-- ==================== HOME ==================== -->
-  <div class="page active" id="page-home">
-    <div class="search-bar">
-      <span>🔍</span>
-      <input type="text" placeholder="名前・会社名で検索..." oninput="filterContacts(this.value)">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo">Card<span>Link</span></div>
+      <div class="header-actions">
+        <div class="icon-btn" onclick="showPage('settings')">⚙️</div>
+      </div>
     </div>
 
-    <div class="tags-row" id="tag-row">
-      <div class="tag active" onclick="filterTag(this,'全て')">全て</div>
-      <div class="tag" onclick="filterTag(this,'IT')">IT</div>
-      <div class="tag" onclick="filterTag(this,'製造')">製造</div>
-      <div class="tag" onclick="filterTag(this,'金融')">金融</div>
-      <div class="tag" onclick="filterTag(this,'展示会')">展示会</div>
-    </div>
-
-    <div class="section-label">最近の連絡先</div>
-    <div class="contact-list" id="contact-list">
-      <!-- JS で描画 -->
-    </div>
-  </div>
-
-  <!-- ==================== OCR ==================== -->
-  <div class="page" id="page-scan">
-    <div class="ocr-steps">
-
-      <!-- Step indicator -->
-      <div class="step-indicator">
-        <div class="step-dot active" id="sdot1">1</div>
-        <div class="step-line" id="sline1"></div>
-        <div class="step-dot" id="sdot2">2</div>
-        <div class="step-line" id="sline2"></div>
-        <div class="step-dot" id="sdot3">3</div>
+    <!-- ==================== HOME ==================== -->
+    <div class="page active" id="page-home">
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="名前・会社名で検索..." oninput="filterContacts(this.value)">
       </div>
 
-      <!-- Step 1: Upload -->
-      <div id="step1">
-        <div style="margin-bottom:16px">
-          <div style="font-size:17px;font-weight:700;margin-bottom:4px">名刺を撮影 / 選択</div>
-          <div style="font-size:13px;color:var(--text-dim)">複数の名刺が写った写真もOKです</div>
+      <div class="tags-row" id="tag-row">
+        <div class="tag active" onclick="filterTag(this,'全て')">全て</div>
+        <div class="tag" onclick="filterTag(this,'IT')">IT</div>
+        <div class="tag" onclick="filterTag(this,'製造')">製造</div>
+        <div class="tag" onclick="filterTag(this,'金融')">金融</div>
+        <div class="tag" onclick="filterTag(this,'展示会')">展示会</div>
+      </div>
+
+      <div class="section-label">最近の連絡先</div>
+      <div class="contact-list" id="contact-list">
+        <!-- JS で描画 -->
+      </div>
+    </div>
+
+    <!-- ==================== OCR ==================== -->
+    <div class="page" id="page-scan">
+      <div class="ocr-steps">
+
+        <!-- Step indicator -->
+        <div class="step-indicator">
+          <div class="step-dot active" id="sdot1">1</div>
+          <div class="step-line" id="sline1"></div>
+          <div class="step-dot" id="sdot2">2</div>
+          <div class="step-line" id="sline2"></div>
+          <div class="step-dot" id="sdot3">3</div>
         </div>
-        <div class="upload-zone" id="drop-zone">
-          <input type="file" accept="image/*" multiple capture="environment" onchange="handleFileSelect(event)">
-          <div class="upload-icon">📷</div>
-          <div class="upload-text">タップして撮影 or 選択</div>
-          <div class="upload-sub">JPEG / PNG · 最大10MB</div>
+
+        <!-- Step 1: Upload -->
+        <div id="step1">
+          <div style="margin-bottom:16px">
+            <div style="font-size:17px;font-weight:700;margin-bottom:4px">名刺を撮影 / 選択</div>
+            <div style="font-size:13px;color:var(--text-dim)">複数の名刺が写った写真もOKです</div>
+          </div>
+          <div class="upload-zone" id="drop-zone">
+            <input type="file" accept="image/*" multiple capture="environment" onchange="handleFileSelect(event)">
+            <div class="upload-icon">📷</div>
+            <div class="upload-text">タップして撮影 or 選択</div>
+            <div class="upload-sub">JPEG / PNG · 最大10MB</div>
+          </div>
+          <div class="preview-zone" id="preview-zone" style="margin-top:12px">
+            <img id="preview-img" src="" alt="preview">
+            <div class="preview-footer">
+              <span id="preview-name">image.jpg</span>
+              <button class="btn btn-secondary btn-sm" onclick="resetUpload()">変更</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="analyze-btn" style="margin-top:16px" disabled onclick="startAnalysis()">
+            🤖 AIで名刺情報を解析
+          </button>
         </div>
-        <div class="preview-zone" id="preview-zone" style="margin-top:12px">
-          <img id="preview-img" src="" alt="preview">
-          <div class="preview-footer">
-            <span id="preview-name">image.jpg</span>
-            <button class="btn btn-secondary btn-sm" onclick="resetUpload()">変更</button>
+
+        <!-- Step 2: Analyzing -->
+        <div class="analyzing-box" id="step2">
+          <div class="pulse-ring">🤖</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:8px">解析中...</div>
+          <div class="analyzing-text">名刺の文字を読み取っています</div>
+          <div class="analyzing-sub" id="analyze-progress">位置情報を取得しています...</div>
+        </div>
+
+        <!-- Step 3: Results -->
+        <div class="result-cards" id="step3">
+          <div style="font-size:17px;font-weight:700;margin-bottom:0px">解析結果を確認</div>
+          <div style="font-size:13px;color:var(--text-dim);margin-top:2px;margin-bottom:4px">内容を確認・編集してから登録してください</div>
+
+          <div class="location-suggest" id="location-suggest">
+            <div class="location-suggest-icon">📍</div>
+            <div class="location-suggest-body">
+              <div class="location-suggest-label">初回会場サジェスト</div>
+              <div class="location-suggest-text" id="suggest-place">東京ビッグサイト</div>
+              <div class="location-suggest-sub" id="suggest-event">IT Week 2026 - 西ホール（推定）</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="acceptSuggest()">採用</button>
+          </div>
+
+          <div id="result-cards-container"></div>
+
+          <button class="btn btn-primary" onclick="saveAll()">✅ すべて登録する</button>
+          <button class="btn btn-secondary" onclick="resetOCR()" style="margin-top:8px">やり直す</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==================== DETAIL ==================== -->
+    <div class="page" id="page-detail">
+      <div class="detail-hero">
+        <div class="detail-avatar" id="d-avatar">山</div>
+        <div>
+          <div class="detail-name" id="d-name">山田 太郎</div>
+          <div class="detail-position" id="d-position">営業部長</div>
+          <div class="detail-company" id="d-company">株式会社テックジャパン</div>
+        </div>
+      </div>
+
+      <div class="detail-actions">
+        <div class="action-btn" onclick="callAction('tel')">
+          <div class="ab-icon">📞</div>電話
+        </div>
+        <div class="action-btn" onclick="callAction('mail')">
+          <div class="ab-icon">✉️</div>メール
+        </div>
+        <div class="action-btn" onclick="callAction('map')">
+          <div class="ab-icon">🗺️</div>地図
+        </div>
+        <div class="action-btn primary" onclick="goToMailGen()">
+          <div class="ab-icon">🤖</div>AI文章
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">連絡先情報</div>
+        <div class="info-row">
+          <div class="info-icon">📧</div>
+          <div>
+            <div class="info-label">メール</div>
+            <div class="info-value" id="d-email">yamada@techjapan.co.jp</div>
           </div>
         </div>
-        <button class="btn btn-primary" id="analyze-btn" style="margin-top:16px" disabled onclick="startAnalysis()">
-          🤖 AIで名刺情報を解析
-        </button>
-      </div>
-
-      <!-- Step 2: Analyzing -->
-      <div class="analyzing-box" id="step2">
-        <div class="pulse-ring">🤖</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:8px">解析中...</div>
-        <div class="analyzing-text">名刺の文字を読み取っています</div>
-        <div class="analyzing-sub" id="analyze-progress">位置情報を取得しています...</div>
-      </div>
-
-      <!-- Step 3: Results -->
-      <div class="result-cards" id="step3">
-        <div style="font-size:17px;font-weight:700;margin-bottom:0px">解析結果を確認</div>
-        <div style="font-size:13px;color:var(--text-dim);margin-top:2px;margin-bottom:4px">内容を確認・編集してから登録してください</div>
-
-        <div class="location-suggest" id="location-suggest">
-          <div class="location-suggest-icon">📍</div>
-          <div class="location-suggest-body">
-            <div class="location-suggest-label">初回会場サジェスト</div>
-            <div class="location-suggest-text" id="suggest-place">東京ビッグサイト</div>
-            <div class="location-suggest-sub" id="suggest-event">IT Week 2026 - 西ホール（推定）</div>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="acceptSuggest()">採用</button>
-        </div>
-
-        <div id="result-cards-container"></div>
-
-        <button class="btn btn-primary" onclick="saveAll()">✅ すべて登録する</button>
-        <button class="btn btn-secondary" onclick="resetOCR()" style="margin-top:8px">やり直す</button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ==================== DETAIL ==================== -->
-  <div class="page" id="page-detail">
-    <div class="detail-hero">
-      <div class="detail-avatar" id="d-avatar">山</div>
-      <div>
-        <div class="detail-name" id="d-name">山田 太郎</div>
-        <div class="detail-position" id="d-position">営業部長</div>
-        <div class="detail-company" id="d-company">株式会社テックジャパン</div>
-      </div>
-    </div>
-
-    <div class="detail-actions">
-      <div class="action-btn" onclick="callAction('tel')"><div class="ab-icon">📞</div>電話</div>
-      <div class="action-btn" onclick="callAction('mail')"><div class="ab-icon">✉️</div>メール</div>
-      <div class="action-btn" onclick="callAction('map')"><div class="ab-icon">🗺️</div>地図</div>
-      <div class="action-btn primary" onclick="goToMailGen()"><div class="ab-icon">🤖</div>AI文章</div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-section-title">連絡先情報</div>
-      <div class="info-row">
-        <div class="info-icon">📧</div>
-        <div><div class="info-label">メール</div><div class="info-value" id="d-email">yamada@techjapan.co.jp</div></div>
-      </div>
-      <div class="info-row">
-        <div class="info-icon">📱</div>
-        <div><div class="info-label">電話番号</div><div class="info-value" id="d-tel">090-1234-5678</div></div>
-      </div>
-      <div class="info-row">
-        <div class="info-icon">🌐</div>
-        <div><div class="info-label">会社HP</div><div class="info-value" id="d-web" style="color:var(--accent2)">techjapan.co.jp</div></div>
-      </div>
-      <div class="info-row">
-        <div class="info-icon">📍</div>
-        <div><div class="info-label">初回会場</div><div class="info-value" id="d-venue">東京ビッグサイト / IT Week 2026</div></div>
-      </div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-section-title">メモ</div>
-      <div class="memo-list" id="d-memos">
-        <div class="memo-item">
-          <div class="memo-date">2026-04-08</div>
-          <div class="memo-text">展示会で名刺交換。SaaS系のツールに興味あり。来月デモを見たいとのこと。決裁権あり。</div>
-        </div>
-      </div>
-      <div class="add-memo-area">
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">メモを追加</div>
-        <textarea id="new-memo-text" placeholder="今日の出来事、気づきなど..."></textarea>
-        <div class="add-memo-actions">
-          <button class="btn btn-secondary btn-sm">🎤 音声</button>
-          <button class="btn btn-secondary btn-sm" onclick="aiMemoOrganize()">✨ AI整理</button>
-          <button class="btn btn-primary btn-sm" onclick="saveMemo()">保存</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="detail-section" style="border-bottom:none">
-      <button class="btn btn-secondary" onclick="showPage('home')">← 一覧に戻る</button>
-    </div>
-  </div>
-
-  <!-- ==================== MAIL ==================== -->
-  <div class="page" id="page-mail">
-    <div class="mail-section">
-      <div style="font-size:17px;font-weight:700;margin-bottom:4px">メール生成</div>
-      <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">名簿情報とメモを元にAIがメールを作成します</div>
-
-      <div class="mail-select-contact" id="mail-target-card" onclick="pickContact()">
-        <div class="avatar av-green" id="mail-av">山</div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:500" id="mail-target-name">山田 太郎</div>
-          <div style="font-size:12px;color:var(--text-dim)" id="mail-target-company">株式会社テックジャパン</div>
-        </div>
-        <span style="color:var(--text-dim);font-size:20px">›</span>
-      </div>
-
-      <div class="section-label" style="padding:0;margin-bottom:10px">メールの種類</div>
-      <div class="mail-type-grid">
-        <div class="mail-type-btn selected" onclick="selectMailType(this,'thanks')">
-          <div class="mail-type-icon">🙏</div>
-          <div class="mail-type-label">お礼メール</div>
-        </div>
-        <div class="mail-type-btn" onclick="selectMailType(this,'sales')">
-          <div class="mail-type-icon">💼</div>
-          <div class="mail-type-label">営業メール</div>
-        </div>
-        <div class="mail-type-btn" onclick="selectMailType(this,'meeting')">
-          <div class="mail-type-icon">📅</div>
-          <div class="mail-type-label">日程調整</div>
-        </div>
-        <div class="mail-type-btn" onclick="selectMailType(this,'followup')">
-          <div class="mail-type-icon">🔄</div>
-          <div class="mail-type-label">フォロー</div>
-        </div>
-      </div>
-
-      <div class="mail-prompt-area">
-        <div class="mail-prompt-label">補足・依頼内容（任意）</div>
-        <textarea id="mail-prompt" placeholder="例：先日のデモの件でお礼を伝えつつ、来週の商談を打診したい"></textarea>
-      </div>
-
-      <button class="btn btn-primary" onclick="generateMail()">🤖 メールを生成する</button>
-
-      <div class="generated-mail" id="generated-mail" style="margin-top:16px">
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;letter-spacing:1px">生成結果</div>
-        <div class="mail-subject" id="mail-subject"></div>
-        <div style="height:1px;background:var(--border);margin:10px 0"></div>
-        <div class="mail-body" id="mail-body"></div>
-        <div class="mail-footer-actions">
-          <button class="btn btn-primary btn-sm" onclick="copyMail()">📋 コピー</button>
-          <button class="btn btn-secondary btn-sm" onclick="generateMail()">🔄 再生成</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== SETTINGS ==================== -->
-  <div class="page" id="page-settings">
-    <div class="settings-section">
-      <div class="settings-title">設定</div>
-      <div class="settings-sub">APIキーとスプレッドシートを設定してください</div>
-
-      <div class="settings-group">
-        <div class="settings-item">
-          <div class="settings-item-label">🤖 Anthropic APIキー（Claude Haiku）</div>
-          <input type="password" id="api-key-input" placeholder="sk-ant-..." oninput="saveSettings()">
-          <div class="settings-status">
-            <div class="status-dot idle" id="api-status-dot"></div>
-            <span id="api-status-text" style="color:var(--text-dim)">未設定</span>
+        <div class="info-row">
+          <div class="info-icon">📱</div>
+          <div>
+            <div class="info-label">電話番号</div>
+            <div class="info-value" id="d-tel">090-1234-5678</div>
           </div>
         </div>
-        <div class="settings-item">
-          <div class="settings-item-label">📊 Google Sheets ID</div>
-          <input type="text" id="sheet-id-input" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" oninput="saveSettings()">
-          <div class="settings-status">
-            <div class="status-dot idle" id="sheet-status-dot"></div>
-            <span id="sheet-status-text" style="color:var(--text-dim)">未設定</span>
+        <div class="info-row">
+          <div class="info-icon">🌐</div>
+          <div>
+            <div class="info-label">会社HP</div>
+            <div class="info-value" id="d-web" style="color:var(--accent2)">techjapan.co.jp</div>
           </div>
         </div>
-        <div class="settings-item">
-          <div class="settings-item-label">🔗 Google Apps Script URL</div>
-          <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..." oninput="saveSettings()">
+        <div class="info-row">
+          <div class="info-icon">📍</div>
+          <div>
+            <div class="info-label">初回会場</div>
+            <div class="info-value" id="d-venue">東京ビッグサイト / IT Week 2026</div>
+          </div>
         </div>
       </div>
 
-      <div class="settings-group">
-        <div class="settings-item">
-          <div class="settings-item-label">👤 自分の名前</div>
-          <input type="text" id="my-name-input" placeholder="田中 花子" oninput="saveSettings()">
+      <div class="detail-section">
+        <div class="detail-section-title">メモ</div>
+        <div class="memo-list" id="d-memos">
+          <div class="memo-item">
+            <div class="memo-date">2026-04-08</div>
+            <div class="memo-text">展示会で名刺交換。SaaS系のツールに興味あり。来月デモを見たいとのこと。決裁権あり。</div>
+          </div>
         </div>
-        <div class="settings-item">
-          <div class="settings-item-label">🏢 所属・役職</div>
-          <input type="text" id="my-company-input" placeholder="○○株式会社 営業部" oninput="saveSettings()">
+        <div class="add-memo-area">
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">メモを追加</div>
+          <textarea id="new-memo-text" placeholder="今日の出来事、気づきなど..."></textarea>
+          <div class="add-memo-actions">
+            <button class="btn btn-secondary btn-sm">🎤 音声</button>
+            <button class="btn btn-secondary btn-sm" onclick="aiMemoOrganize()">✨ AI整理</button>
+            <button class="btn btn-primary btn-sm" onclick="saveMemo()">保存</button>
+          </div>
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="testConnection()">接続テスト</button>
+      <div class="detail-section" style="border-bottom:none;display:flex;gap:10px">
+        <button class="btn btn-secondary" style="flex:1" onclick="showPage('home')">← 戻る</button>
+        <button class="btn btn-secondary" style="flex:1" onclick="openEdit()">✏️ 編集</button>
+        <button class="btn"
+          style="flex:1;background:rgba(255,107,107,0.15);color:var(--danger);border:1px solid rgba(255,107,107,0.3)"
+          onclick="confirmDelete()">🗑️ 削除</button>
+      </div>
+    </div>
 
-      <div style="margin-top:24px;padding:14px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border)">
-        <div style="font-size:12px;color:var(--text-dim);line-height:1.7">
-          <div style="font-weight:700;color:var(--text-mid);margin-bottom:6px">📋 Google Sheets セットアップ</div>
-          1. Google Sheetsで新規スプレッドシート作成<br>
-          2. URLからシートIDをコピー<br>
-          3. 拡張機能 → Apps Script でAPIエンドポイントを作成<br>
-          4. スクリプトURLをここに貼り付け
+    <!-- ==================== EDIT ==================== -->
+    <div class="page" id="page-edit">
+      <div class="detail-section" style="padding-top:20px">
+        <div style="font-size:17px;font-weight:700;margin-bottom:16px">連絡先を編集</div>
+
+        <div class="form-row">
+          <div class="form-label">氏名</div>
+          <input class="form-input" id="edit-name" placeholder="山田 太郎">
+        </div>
+        <div class="form-row">
+          <div class="form-label">役職</div>
+          <input class="form-input" id="edit-position" placeholder="営業部長">
+        </div>
+        <div class="form-row">
+          <div class="form-label">会社名</div>
+          <input class="form-input" id="edit-company" placeholder="株式会社テック">
+        </div>
+        <div class="form-row">
+          <div class="form-label">メール</div>
+          <input class="form-input" id="edit-email" type="email" placeholder="example@company.co.jp">
+        </div>
+        <div class="form-row">
+          <div class="form-label">電話番号</div>
+          <input class="form-input" id="edit-tel" type="tel" placeholder="090-0000-0000">
+        </div>
+        <div class="form-row">
+          <div class="form-label">会社HP</div>
+          <input class="form-input" id="edit-web" placeholder="company.co.jp">
+        </div>
+        <div class="form-row">
+          <div class="form-label">初回会場</div>
+          <input class="form-input" id="edit-venue" placeholder="東京ビッグサイト / IT Week">
+        </div>
+        <div class="form-row">
+          <div class="form-label">タグ</div>
+          <input class="form-input" id="edit-tag" placeholder="展示会">
+        </div>
+        <div class="form-row">
+          <div class="form-label">ステータス</div>
+          <select class="form-input" id="edit-heat" style="background:var(--surface2);color:var(--text)">
+            <option value="">未設定</option>
+            <option value="hot">🔥 ホット</option>
+            <option value="warm">🌤 ウォーム</option>
+            <option value="cold">❄️ コールド</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn-secondary" style="flex:1" onclick="openDetail(currentContact.id)">キャンセル</button>
+          <button class="btn btn-primary" style="flex:1" onclick="saveEdit()">💾 保存</button>
         </div>
       </div>
     </div>
+
+    <!-- ==================== MAIL ==================== -->
+    <div class="page" id="page-mail">
+      <div class="mail-section">
+        <div style="font-size:17px;font-weight:700;margin-bottom:4px">メール生成</div>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:20px">名簿情報とメモを元にAIがメールを作成します</div>
+
+        <div class="mail-select-contact" id="mail-target-card" onclick="pickContact()">
+          <div class="avatar av-green" id="mail-av">山</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:500" id="mail-target-name">山田 太郎</div>
+            <div style="font-size:12px;color:var(--text-dim)" id="mail-target-company">株式会社テックジャパン</div>
+          </div>
+          <span style="color:var(--text-dim);font-size:20px">›</span>
+        </div>
+
+        <div class="section-label" style="padding:0;margin-bottom:10px">メールの種類</div>
+        <div class="mail-type-grid">
+          <div class="mail-type-btn selected" onclick="selectMailType(this,'thanks')">
+            <div class="mail-type-icon">🙏</div>
+            <div class="mail-type-label">お礼メール</div>
+          </div>
+          <div class="mail-type-btn" onclick="selectMailType(this,'sales')">
+            <div class="mail-type-icon">💼</div>
+            <div class="mail-type-label">営業メール</div>
+          </div>
+          <div class="mail-type-btn" onclick="selectMailType(this,'meeting')">
+            <div class="mail-type-icon">📅</div>
+            <div class="mail-type-label">日程調整</div>
+          </div>
+          <div class="mail-type-btn" onclick="selectMailType(this,'followup')">
+            <div class="mail-type-icon">🔄</div>
+            <div class="mail-type-label">フォロー</div>
+          </div>
+        </div>
+
+        <div class="mail-prompt-area">
+          <div class="mail-prompt-label">補足・依頼内容（任意）</div>
+          <textarea id="mail-prompt" placeholder="例：先日のデモの件でお礼を伝えつつ、来週の商談を打診したい"></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="generateMail()">🤖 メールを生成する</button>
+
+        <div class="generated-mail" id="generated-mail" style="margin-top:16px">
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;letter-spacing:1px">生成結果</div>
+          <div class="mail-subject" id="mail-subject"></div>
+          <div style="height:1px;background:var(--border);margin:10px 0"></div>
+          <div class="mail-body" id="mail-body"></div>
+          <div class="mail-footer-actions">
+            <button class="btn btn-primary btn-sm" onclick="copyMail()">📋 コピー</button>
+            <button class="btn btn-secondary btn-sm" onclick="generateMail()">🔄 再生成</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== SETTINGS ==================== -->
+    <div class="page" id="page-settings">
+      <div class="settings-section">
+        <div class="settings-title">設定</div>
+        <div class="settings-sub">APIキーとスプレッドシートを設定してください</div>
+
+        <div class="settings-group">
+          <div class="settings-item">
+            <div class="settings-item-label">🤖 Anthropic APIキー（Claude Haiku）</div>
+            <input type="password" id="api-key-input" placeholder="sk-ant-..." oninput="saveSettings()">
+            <div class="settings-status">
+              <div class="status-dot idle" id="api-status-dot"></div>
+              <span id="api-status-text" style="color:var(--text-dim)">未設定</span>
+            </div>
+          </div>
+          <div class="settings-item">
+            <div class="settings-item-label">📊 Google Sheets ID</div>
+            <input type="text" id="sheet-id-input" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+              oninput="saveSettings()">
+            <div class="settings-status">
+              <div class="status-dot idle" id="sheet-status-dot"></div>
+              <span id="sheet-status-text" style="color:var(--text-dim)">未設定</span>
+            </div>
+          </div>
+          <div class="settings-item">
+            <div class="settings-item-label">🔗 Google Apps Script URL</div>
+            <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/..."
+              oninput="saveSettings()">
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-item">
+            <div class="settings-item-label">👤 自分の名前</div>
+            <input type="text" id="my-name-input" placeholder="田中 花子" oninput="saveSettings()">
+          </div>
+          <div class="settings-item">
+            <div class="settings-item-label">🏢 所属・役職</div>
+            <input type="text" id="my-company-input" placeholder="○○株式会社 営業部" oninput="saveSettings()">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="testConnection()">接続テスト</button>
+
+        <div
+          style="margin-top:24px;padding:14px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.7">
+            <div style="font-weight:700;color:var(--text-mid);margin-bottom:6px">📋 Google Sheets セットアップ</div>
+            1. Google Sheetsで新規スプレッドシート作成<br>
+            2. URLからシートIDをコピー<br>
+            3. 拡張機能 → Apps Script でAPIエンドポイントを作成<br>
+            4. スクリプトURLをここに貼り付け
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" id="nav-home" onclick="showPage('home')">
+        <div class="nav-icon">👥</div>名簿
+      </div>
+      <div class="nav-item" id="nav-scan" onclick="showPage('scan')">
+        <div class="nav-icon">📷</div>名刺登録
+      </div>
+      <div class="nav-item" id="nav-mail" onclick="showPage('mail')">
+        <div class="nav-icon">✉️</div>メール
+      </div>
+      <div class="nav-item" id="nav-settings" onclick="showPage('settings')">
+        <div class="nav-icon">⚙️</div>設定
+      </div>
+    </nav>
+
   </div>
 
-  <!-- Bottom Nav -->
-  <nav class="bottom-nav">
-    <div class="nav-item active" id="nav-home" onclick="showPage('home')">
-      <div class="nav-icon">👥</div>名簿
-    </div>
-    <div class="nav-item" id="nav-scan" onclick="showPage('scan')">
-      <div class="nav-icon">📷</div>名刺登録
-    </div>
-    <div class="nav-item" id="nav-mail" onclick="showPage('mail')">
-      <div class="nav-icon">✉️</div>メール
-    </div>
-    <div class="nav-item" id="nav-settings" onclick="showPage('settings')">
-      <div class="nav-icon">⚙️</div>設定
-    </div>
-  </nav>
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 
-</div>
+  <script>
+    // ==================== DATA ====================
+    const DEMO_CONTACTS = [
+      { id: 1, name: '山田 太郎', position: '営業部長', company: '株式会社テックジャパン', email: 'yamada@techjapan.co.jp', tel: '090-1234-5678', web: 'techjapan.co.jp', venue: '東京ビッグサイト / IT Week 2026', tag: 'IT', heat: 'hot', date: '4/8', initial: '山', av: 'av-green', memos: [{ date: '2026-04-08', text: '展示会で名刺交換。SaaS系のツールに興味あり。来月デモを見たいとのこと。決裁権あり。' }] },
+      { id: 2, name: '鈴木 美咲', position: 'マーケティング課長', company: 'フューチャーコープ株式会社', email: 'suzuki@futurecorp.jp', tel: '080-9876-5432', web: 'futurecorp.jp', venue: 'パシフィコ横浜 / DX Summit', tag: 'IT', heat: 'warm', date: '4/7', initial: '鈴', av: 'av-blue', memos: [] },
+      { id: 3, name: '中村 健二', position: '取締役', company: '日本製造ソリューションズ', email: 'nakamura@jms.co.jp', tel: '070-1111-2222', web: 'jms.co.jp', venue: '幕張メッセ / 製造業展', tag: '製造', heat: '', date: '3/22', initial: '中', av: 'av-orange', memos: [] },
+      { id: 4, name: '高橋 さやか', position: '事業開発', company: 'FinanceNext Inc.', email: 'takahashi@financenext.com', tel: '090-3333-4444', web: 'financenext.com', venue: '大手町 / 個別訪問', tag: '金融', heat: '', date: '3/15', initial: '高', av: 'av-red', memos: [] },
+    ];
 
-<!-- Toast -->
-<div class="toast" id="toast"></div>
+    let contacts = [];
+    let currentContact = null;
+    let selectedMailType = 'thanks';
+    let settings = {};
+    let gasLoaded = false; // GASからデータ取得済みかどうか
 
-<script>
-// ==================== DATA ====================
-const DEMO_CONTACTS = [
-  { id:1, name:'山田 太郎', position:'営業部長', company:'株式会社テックジャパン', email:'yamada@techjapan.co.jp', tel:'090-1234-5678', web:'techjapan.co.jp', venue:'東京ビッグサイト / IT Week 2026', tag:'IT', heat:'hot', date:'4/8', initial:'山', av:'av-green', memos:[{date:'2026-04-08',text:'展示会で名刺交換。SaaS系のツールに興味あり。来月デモを見たいとのこと。決裁権あり。'}] },
-  { id:2, name:'鈴木 美咲', position:'マーケティング課長', company:'フューチャーコープ株式会社', email:'suzuki@futurecorp.jp', tel:'080-9876-5432', web:'futurecorp.jp', venue:'パシフィコ横浜 / DX Summit', tag:'IT', heat:'warm', date:'4/7', initial:'鈴', av:'av-blue', memos:[] },
-  { id:3, name:'中村 健二', position:'取締役', company:'日本製造ソリューションズ', email:'nakamura@jms.co.jp', tel:'070-1111-2222', web:'jms.co.jp', venue:'幕張メッセ / 製造業展', tag:'製造', heat:'', date:'3/22', initial:'中', av:'av-orange', memos:[] },
-  { id:4, name:'高橋 さやか', position:'事業開発', company:'FinanceNext Inc.', email:'takahashi@financenext.com', tel:'090-3333-4444', web:'financenext.com', venue:'大手町 / 個別訪問', tag:'金融', heat:'', date:'3/15', initial:'高', av:'av-red', memos:[] },
-];
+    // ==================== GAS API ====================
+    function getGasUrl() { return localStorage.getItem('cl_gas_url') || ''; }
 
-let contacts = [];
-let currentContact = null;
-let selectedMailType = 'thanks';
-let settings = {};
-let gasLoaded = false; // GASからデータ取得済みかどうか
+    // GASから全連絡先を取得してcontactsに反映
+    async function loadContactsFromGAS() {
+      const gasUrl = getGasUrl();
+      if (!gasUrl) return false;
+      try {
+        const res = await fetch(gasUrl + '?action=list');
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        // GASデータをUI向けに変換
+        contacts = data.contacts.map(c => enrichContact(c));
+        gasLoaded = true;
+        return true;
+      } catch (e) {
+        console.warn('GAS load failed:', e);
+        return false;
+      }
+    }
 
-// ==================== GAS API ====================
-function getGasUrl() { return localStorage.getItem('cl_gas_url') || ''; }
+    // GASへのPOST共通関数
+    // Content-Type: text/plain でpreflightを回避（GAS CORS対策）
+    async function gasPost(payload) {
+      const gasUrl = getGasUrl();
+      if (!gasUrl) return { ok: false, error: 'GAS URL未設定' };
+      const res = await fetch(gasUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload),
+        redirect: 'follow'
+      });
+      return res.json();
+    }
 
-// GASから全連絡先を取得してcontactsに反映
-async function loadContactsFromGAS() {
-  const gasUrl = getGasUrl();
-  if (!gasUrl) return false;
-  try {
-    const res = await fetch(gasUrl + '?action=list');
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    // GASデータをUI向けに変換
-    contacts = data.contacts.map(c => enrichContact(c));
-    gasLoaded = true;
-    return true;
-  } catch(e) {
-    console.warn('GAS load failed:', e);
-    return false;
-  }
-}
+    // 連絡先をGASに保存（新規 or 更新）
+    async function saveContactToGAS(contact) {
+      try {
+        const data = await gasPost({ action: 'upsert', contact });
+        return data.ok;
+      } catch (e) {
+        console.warn('GAS save failed:', e);
+        return false;
+      }
+    }
 
-// GASへのPOST共通関数
-// Content-Type: text/plain でpreflightを回避（GAS CORS対策）
-async function gasPost(payload) {
-  const gasUrl = getGasUrl();
-  if (!gasUrl) return { ok: false, error: 'GAS URL未設定' };
-  const res = await fetch(gasUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload),
-    redirect: 'follow'
-  });
-  return res.json();
-}
+    // 連絡先をGASから削除
+    async function deleteContactFromGAS(id) {
+      if (!getGasUrl()) return false;
+      try {
+        const data = await gasPost({ action: 'delete', id: String(id) });
+        return data.ok;
+      } catch (e) {
+        console.warn('GAS delete failed:', e);
+        return false;
+      }
+    }
 
-// 連絡先をGASに保存（新規 or 更新）
-async function saveContactToGAS(contact) {
-  try {
-    const data = await gasPost({ action: 'upsert', contact });
-    return data.ok;
-  } catch(e) {
-    console.warn('GAS save failed:', e);
-    return false;
-  }
-}
+    // GAS生データをUI表示用に補完
+    function enrichContact(c) {
+      const avColors = ['av-green', 'av-blue', 'av-orange', 'av-red'];
+      const existing = contacts.find(ex => String(ex.id) === String(c.id));
+      return {
+        ...c,
+        id: c.id,
+        initial: c.name ? c.name[0] : '?',
+        av: existing ? existing.av : avColors[Math.floor(Math.random() * 4)],
+        date: c.created_at ? c.created_at.replace(/^\d{4}-/, '').replace('-', '/') : '-',
+        memos: Array.isArray(c.memos) ? c.memos : []
+      };
+    }
 
-// 連絡先をGASから削除
-async function deleteContactFromGAS(id) {
-  if (!getGasUrl()) return false;
-  try {
-    const data = await gasPost({ action: 'delete', id: String(id) });
-    return data.ok;
-  } catch(e) {
-    console.warn('GAS delete failed:', e);
-    return false;
-  }
-}
+    // ==================== NAVIGATION ====================
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      const nav = document.getElementById('nav-' + name);
+      if (nav) nav.classList.add('active');
+      if (name === 'scan') resetOCR();
+      if (name === 'settings') loadSettings();
+    }
 
-// GAS生データをUI表示用に補完
-function enrichContact(c) {
-  const avColors = ['av-green','av-blue','av-orange','av-red'];
-  const existing = contacts.find(ex => String(ex.id) === String(c.id));
-  return {
-    ...c,
-    id: c.id,
-    initial: c.name ? c.name[0] : '?',
-    av: existing ? existing.av : avColors[Math.floor(Math.random() * 4)],
-    date: c.created_at ? c.created_at.replace(/^\d{4}-/, '').replace('-', '/') : '-',
-    memos: Array.isArray(c.memos) ? c.memos : []
-  };
-}
-
-// ==================== NAVIGATION ====================
-function showPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  const nav = document.getElementById('nav-'+name);
-  if(nav) nav.classList.add('active');
-  if(name === 'scan') resetOCR();
-  if(name === 'settings') loadSettings();
-}
-
-// ==================== HOME ====================
-function renderContacts(list) {
-  const el = document.getElementById('contact-list');
-  if(!list.length) { el.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px">該当する連絡先がありません</div>'; return; }
-  el.innerHTML = list.map(c => `
+    // ==================== HOME ====================
+    function renderContacts(list) {
+      const el = document.getElementById('contact-list');
+      if (!list.length) { el.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px">該当する連絡先がありません</div>'; return; }
+      el.innerHTML = list.map(c => `
     <div class="contact-card" onclick="openDetail('${c.id}')">
       <div class="avatar ${c.av}">${c.initial}</div>
       <div class="contact-info">
@@ -943,337 +1619,394 @@ function renderContacts(list) {
       </div>
     </div>
   `).join('');
-}
-
-function filterContacts(q) {
-  const filtered = contacts.filter(c =>
-    c.name.includes(q) || c.company.includes(q) || c.position.includes(q)
-  );
-  renderContacts(filtered);
-}
-
-function filterTag(el, tag) {
-  document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  if(tag === '全て') renderContacts(contacts);
-  else renderContacts(contacts.filter(c => c.tag === tag));
-}
-
-function openDetail(id) {
-  currentContact = contacts.find(c => String(c.id) === String(id));
-  const c = currentContact;
-  document.getElementById('d-avatar').textContent = c.initial;
-  document.getElementById('d-avatar').className = 'detail-avatar';
-  document.getElementById('d-name').textContent = c.name;
-  document.getElementById('d-position').textContent = c.position;
-  document.getElementById('d-company').textContent = c.company;
-  document.getElementById('d-email').textContent = c.email;
-  document.getElementById('d-tel').textContent = c.tel;
-  document.getElementById('d-web').textContent = c.web;
-  document.getElementById('d-venue').textContent = c.venue;
-  const ml = document.getElementById('d-memos');
-  ml.innerHTML = c.memos.length ? c.memos.map(m=>`<div class="memo-item"><div class="memo-date">${m.date}</div><div class="memo-text">${m.text}</div></div>`).join('') : '<div style="font-size:13px;color:var(--text-dim)">メモなし</div>';
-  showPage('detail');
-}
-
-function callAction(type) {
-  const c = currentContact;
-  if(type==='tel') window.location.href = `tel:${c.tel}`;
-  else if(type==='mail') window.location.href = `mailto:${c.email}`;
-  else if(type==='map') window.open(`https://maps.google.com?q=${encodeURIComponent(c.company)}`,'_blank');
-}
-
-function goToMailGen() {
-  updateMailTarget(currentContact);
-  showPage('mail');
-}
-
-// ==================== OCR ====================
-let uploadedFile = null;
-let ocrStep = 1;
-
-function handleFileSelect(evt) {
-  const file = evt.target.files[0];
-  if(!file) return;
-  uploadedFile = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('preview-img').src = e.target.result;
-    document.getElementById('preview-name').textContent = file.name;
-    document.getElementById('preview-zone').style.display = 'block';
-    document.getElementById('drop-zone').style.display = 'none';
-    document.getElementById('analyze-btn').disabled = false;
-  };
-  reader.readAsDataURL(file);
-}
-
-function resetUpload() {
-  uploadedFile = null;
-  document.getElementById('preview-zone').style.display = 'none';
-  document.getElementById('drop-zone').style.display = 'block';
-  document.getElementById('analyze-btn').disabled = true;
-}
-
-function resetOCR() {
-  ocrStep = 1;
-  uploadedFile = null;
-  document.getElementById('step1').style.display = 'block';
-  document.getElementById('step2').classList.remove('visible');
-  document.getElementById('step3').classList.remove('visible');
-  document.getElementById('preview-zone').style.display = 'none';
-  document.getElementById('drop-zone').style.display = 'block';
-  document.getElementById('analyze-btn').disabled = true;
-  setStep(1);
-}
-
-function setStep(n) {
-  [1,2,3].forEach(i => {
-    const d = document.getElementById('sdot'+i);
-    d.classList.remove('active','done');
-    if(i < n) d.classList.add('done');
-    else if(i === n) d.classList.add('active');
-    if(i < 3) {
-      const l = document.getElementById('sline'+i);
-      l.classList.toggle('done', i < n);
     }
-  });
-}
 
-async function startAnalysis() {
-  suggestAccepted = false;
-  document.getElementById('step1').style.display = 'none';
-  document.getElementById('step2').classList.add('visible');
-  setStep(2);
+    function filterContacts(q) {
+      const filtered = contacts.filter(c =>
+        c.name.includes(q) || c.company.includes(q) || c.position.includes(q)
+      );
+      renderContacts(filtered);
+    }
 
-  const progress = document.getElementById('analyze-progress');
-  const steps = ['位置情報を取得しています...','名刺の文字を認識中...','会社情報を検索中...','データを整理しています...'];
-  let si = 0;
-  const iv = setInterval(() => { if(si < steps.length) progress.textContent = steps[si++]; }, 700);
+    function filterTag(el, tag) {
+      document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      if (tag === '全て') renderContacts(contacts);
+      else renderContacts(contacts.filter(c => c.tag === tag));
+    }
 
-  const apiKey = localStorage.getItem('cl_api_key');
-  let result = null;
+    function openDetail(id) {
+      currentContact = contacts.find(c => String(c.id) === String(id));
+      const c = currentContact;
+      document.getElementById('d-avatar').textContent = c.initial;
+      document.getElementById('d-avatar').className = 'detail-avatar';
+      document.getElementById('d-name').textContent = c.name;
+      document.getElementById('d-position').textContent = c.position;
+      document.getElementById('d-company').textContent = c.company;
+      document.getElementById('d-email').textContent = c.email;
+      document.getElementById('d-tel').textContent = c.tel;
+      document.getElementById('d-web').textContent = c.web;
+      document.getElementById('d-venue').textContent = c.venue;
+      const ml = document.getElementById('d-memos');
+      ml.innerHTML = c.memos.length ? c.memos.map(m => `<div class="memo-item"><div class="memo-date">${m.date}</div><div class="memo-text">${m.text}</div></div>`).join('') : '<div style="font-size:13px;color:var(--text-dim)">メモなし</div>';
+      showPage('detail');
+    }
 
-  if(apiKey && uploadedFile) {
-    try {
-      result = await callClaudeOCR(apiKey);
-    } catch(e) { console.warn('API error, using demo data', e); }
-  }
+    function openEdit() {
+      const c = currentContact;
+      document.getElementById('edit-name').value = c.name || '';
+      document.getElementById('edit-position').value = c.position || '';
+      document.getElementById('edit-company').value = c.company || '';
+      document.getElementById('edit-email').value = c.email || '';
+      document.getElementById('edit-tel').value = c.tel || '';
+      document.getElementById('edit-web').value = c.web || '';
+      document.getElementById('edit-venue').value = c.venue || '';
+      document.getElementById('edit-tag').value = c.tag || '';
+      document.getElementById('edit-heat').value = c.heat || '';
+      showPage('edit');
+    }
 
-  await new Promise(r => setTimeout(r, 3000));
-  clearInterval(iv);
+    async function saveEdit() {
+      const c = currentContact;
+      c.name = document.getElementById('edit-name').value.trim() || c.name;
+      c.position = document.getElementById('edit-position').value.trim();
+      c.company = document.getElementById('edit-company').value.trim();
+      c.email = document.getElementById('edit-email').value.trim();
+      c.tel = document.getElementById('edit-tel').value.trim();
+      c.web = document.getElementById('edit-web').value.trim();
+      c.venue = document.getElementById('edit-venue').value.trim();
+      c.tag = document.getElementById('edit-tag').value.trim();
+      c.heat = document.getElementById('edit-heat').value;
+      c.initial = c.name ? c.name[0] : '?';
 
-  if(!result) result = getDemoOCRResult();
+      // ローカル配列を更新
+      const idx = contacts.findIndex(x => String(x.id) === String(c.id));
+      if (idx !== -1) contacts[idx] = c;
 
-  document.getElementById('step2').classList.remove('visible');
-  renderOCRResult(result);
-  document.getElementById('step3').classList.add('visible');
-  setStep(3);
-}
+      showToast('✅ 更新しました');
+      renderContacts(contacts);
+      openDetail(c.id);
 
-async function callClaudeOCR(apiKey) {
-  const imgEl = document.getElementById('preview-img');
-  const b64 = imgEl.src.split(',')[1];
-  const mt = uploadedFile.type || 'image/jpeg';
+      if (getGasUrl()) {
+        const ok = await saveContactToGAS(c);
+        if (ok) showToast('☁️ Sheetsに同期しました');
+      }
+    }
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body: JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:1000,
-      messages:[{
-        role:'user',
-        content:[
-          {type:'image', source:{type:'base64',media_type:mt,data:b64}},
-          {type:'text', text:`この名刺画像から情報を抽出してください。複数枚ある場合はすべて抽出。
+    async function confirmDelete() {
+      if (!confirm(`「${currentContact.name}」を削除しますか？\nこの操作は元に戻せません。`)) return;
+      const id = currentContact.id;
+
+      contacts = contacts.filter(c => String(c.id) !== String(id));
+      renderContacts(contacts);
+      showPage('home');
+      showToast('🗑️ 削除しました');
+
+      if (getGasUrl()) {
+        await deleteContactFromGAS(id);
+      }
+    }
+
+    function callAction(type) {
+      const c = currentContact;
+      if (type === 'tel') window.location.href = `tel:${c.tel}`;
+      else if (type === 'mail') window.location.href = `mailto:${c.email}`;
+      else if (type === 'map') window.open(`https://maps.google.com?q=${encodeURIComponent(c.company)}`, '_blank');
+    }
+
+    function goToMailGen() {
+      updateMailTarget(currentContact);
+      showPage('mail');
+    }
+
+    // ==================== OCR ====================
+    let uploadedFile = null;
+    let ocrStep = 1;
+
+    function handleFileSelect(evt) {
+      const file = evt.target.files[0];
+      if (!file) return;
+      uploadedFile = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('preview-img').src = e.target.result;
+        document.getElementById('preview-name').textContent = file.name;
+        document.getElementById('preview-zone').style.display = 'block';
+        document.getElementById('drop-zone').style.display = 'none';
+        document.getElementById('analyze-btn').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetUpload() {
+      uploadedFile = null;
+      document.getElementById('preview-zone').style.display = 'none';
+      document.getElementById('drop-zone').style.display = 'block';
+      document.getElementById('analyze-btn').disabled = true;
+    }
+
+    function resetOCR() {
+      ocrStep = 1;
+      uploadedFile = null;
+      document.getElementById('step1').style.display = 'block';
+      document.getElementById('step2').classList.remove('visible');
+      document.getElementById('step3').classList.remove('visible');
+      document.getElementById('preview-zone').style.display = 'none';
+      document.getElementById('drop-zone').style.display = 'block';
+      document.getElementById('analyze-btn').disabled = true;
+      setStep(1);
+    }
+
+    function setStep(n) {
+      [1, 2, 3].forEach(i => {
+        const d = document.getElementById('sdot' + i);
+        d.classList.remove('active', 'done');
+        if (i < n) d.classList.add('done');
+        else if (i === n) d.classList.add('active');
+        if (i < 3) {
+          const l = document.getElementById('sline' + i);
+          l.classList.toggle('done', i < n);
+        }
+      });
+    }
+
+    async function startAnalysis() {
+      suggestAccepted = false;
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('step2').classList.add('visible');
+      setStep(2);
+
+      const progress = document.getElementById('analyze-progress');
+      const steps = ['位置情報を取得しています...', '名刺の文字を認識中...', '会社情報を検索中...', 'データを整理しています...'];
+      let si = 0;
+      const iv = setInterval(() => { if (si < steps.length) progress.textContent = steps[si++]; }, 700);
+
+      const apiKey = localStorage.getItem('cl_api_key');
+      let result = null;
+
+      if (apiKey && uploadedFile) {
+        try {
+          result = await callClaudeOCR(apiKey);
+        } catch (e) { console.warn('API error, using demo data', e); }
+      }
+
+      await new Promise(r => setTimeout(r, 3000));
+      clearInterval(iv);
+
+      if (!result) result = getDemoOCRResult();
+
+      document.getElementById('step2').classList.remove('visible');
+      renderOCRResult(result);
+      document.getElementById('step3').classList.add('visible');
+      setStep(3);
+    }
+
+    async function callClaudeOCR(apiKey) {
+      const imgEl = document.getElementById('preview-img');
+      const b64 = imgEl.src.split(',')[1];
+      const mt = uploadedFile.type || 'image/jpeg';
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mt, data: b64 } },
+              {
+                type: 'text', text: `この名刺画像から情報を抽出してください。複数枚ある場合はすべて抽出。
 JSONの配列で返してください。各オブジェクトのキー: name, position, company, email, tel, address, web
 余分な説明やマークダウンは不要。JSONのみ返してください。`}
-        ]
-      }]
-    })
-  });
-  const d = await res.json();
-  const text = d.content[0].text;
-  const clean = text.replace(/```json|```/g,'').trim();
-  return JSON.parse(clean);
-}
+            ]
+          }]
+        })
+      });
+      const d = await res.json();
+      const text = d.content[0].text;
+      const clean = text.replace(/```json|```/g, '').trim();
+      return JSON.parse(clean);
+    }
 
-function getDemoOCRResult() {
-  return [{
-    name:'佐藤 裕介', position:'シニアエンジニア', company:'株式会社クラウドワークス',
-    email:'sato@cloudworks.jp', tel:'03-1234-5678', address:'東京都渋谷区', web:'cloudworks.jp'
-  }];
-}
+    function getDemoOCRResult() {
+      return [{
+        name: '佐藤 裕介', position: 'シニアエンジニア', company: '株式会社クラウドワークス',
+        email: 'sato@cloudworks.jp', tel: '03-1234-5678', address: '東京都渋谷区', web: 'cloudworks.jp'
+      }];
+    }
 
-function renderOCRResult(cards) {
-  const container = document.getElementById('result-cards-container');
-  container.innerHTML = cards.map((c,i) => `
+    function renderOCRResult(cards) {
+      const container = document.getElementById('result-cards-container');
+      container.innerHTML = cards.map((c, i) => `
     <div class="result-card" style="margin-bottom:12px">
       <div class="result-card-header">
-        <div class="result-card-title">名刺 ${i+1}</div>
+        <div class="result-card-title">名刺 ${i + 1}</div>
         <div class="confidence-badge">✓ 解析完了</div>
       </div>
-      ${field('氏名','name',c.name)}
-      ${field('役職','position',c.position)}
-      ${field('会社名','company',c.company)}
-      ${field('メールアドレス','email',c.email||'')}
-      ${field('電話番号','tel',c.tel||'')}
-      ${field('住所','address',c.address||'')}
-      ${field('WebサイトURL','web',c.web||'')}
+      ${field('氏名', 'name', c.name)}
+      ${field('役職', 'position', c.position)}
+      ${field('会社名', 'company', c.company)}
+      ${field('メールアドレス', 'email', c.email || '')}
+      ${field('電話番号', 'tel', c.tel || '')}
+      ${field('住所', 'address', c.address || '')}
+      ${field('WebサイトURL', 'web', c.web || '')}
     </div>
   `).join('');
-}
+    }
 
-function field(label, key, val) {
-  return `<div class="form-row">
+    function field(label, key, val) {
+      return `<div class="form-row">
     <div class="form-label">${label}</div>
     <input class="form-input" data-key="${key}" value="${val}" oninput="this.classList.add('edited')">
   </div>`;
-}
+    }
 
-let suggestAccepted = false;
+    let suggestAccepted = false;
 
-function acceptSuggest() {
-  suggestAccepted = true;
-  showToast('✅ 会場情報を採用しました');
-  document.getElementById('location-suggest').style.opacity = '0.5';
-}
+    function acceptSuggest() {
+      suggestAccepted = true;
+      showToast('✅ 会場情報を採用しました');
+      document.getElementById('location-suggest').style.opacity = '0.5';
+    }
 
-async function saveAll() {
-  const cards = document.querySelectorAll('#result-cards-container .result-card');
-  const newContacts = [];
-  const avColors = ['av-green','av-blue','av-orange','av-red'];
-  cards.forEach((card, idx) => {
-    const inputs = card.querySelectorAll('.form-input');
-    const obj = {};
-    inputs.forEach(i => obj[i.dataset.key] = i.value);
-    const suggest = suggestAccepted
-      ? document.getElementById('suggest-place').textContent + ' / ' + document.getElementById('suggest-event').textContent
-      : '';
-    const today = new Date().toISOString().split('T')[0];
-    newContacts.push({
-      id: String(Date.now()) + String(idx),
-      name: obj.name || '未入力',
-      position: obj.position || '',
-      company: obj.company || '',
-      email: obj.email || '',
-      tel: obj.tel || '',
-      web: obj.web || '',
-      venue: suggest,
-      tag: '展示会',
-      heat: 'warm',
-      created_at: today,
-      date: today.replace(/^\d{4}-/, '').replace('-', '/'),
-      initial: (obj.name||'？')[0],
-      av: avColors[contacts.length % 4],
-      memos: []
-    });
-  });
+    async function saveAll() {
+      const cards = document.querySelectorAll('#result-cards-container .result-card');
+      const newContacts = [];
+      const avColors = ['av-green', 'av-blue', 'av-orange', 'av-red'];
+      cards.forEach((card, idx) => {
+        const inputs = card.querySelectorAll('.form-input');
+        const obj = {};
+        inputs.forEach(i => obj[i.dataset.key] = i.value);
+        const suggest = suggestAccepted
+          ? document.getElementById('suggest-place').textContent + ' / ' + document.getElementById('suggest-event').textContent
+          : '';
+        const today = new Date().toISOString().split('T')[0];
+        newContacts.push({
+          id: String(Date.now()) + String(idx),
+          name: obj.name || '未入力',
+          position: obj.position || '',
+          company: obj.company || '',
+          email: obj.email || '',
+          tel: obj.tel || '',
+          web: obj.web || '',
+          venue: suggest,
+          tag: '展示会',
+          heat: 'warm',
+          created_at: today,
+          date: today.replace(/^\d{4}-/, '').replace('-', '/'),
+          initial: (obj.name || '？')[0],
+          av: avColors[contacts.length % 4],
+          memos: []
+        });
+      });
 
-  contacts = [...newContacts, ...contacts];
-  showToast(`✅ ${newContacts.length}件を登録しました`);
-  setTimeout(() => {
-    renderContacts(contacts);
-    showPage('home');
-  }, 1200);
+      contacts = [...newContacts, ...contacts];
+      showToast(`✅ ${newContacts.length}件を登録しました`);
+      setTimeout(() => {
+        renderContacts(contacts);
+        showPage('home');
+      }, 1200);
 
-  // GASにバックグラウンド保存（UIをブロックしない）
-  const gasUrl = getGasUrl();
-  if (gasUrl) {
-    Promise.all(newContacts.map(c => saveContactToGAS(c))).then(results => {
-      const saved = results.filter(Boolean).length;
-      if (saved > 0) showToast(`☁️ Sheetsに保存しました`);
-      else showToast('⚠️ Sheets保存失敗（ローカルには保存済み）');
-    });
-  }
-}
+      // GASにバックグラウンド保存（UIをブロックしない）
+      const gasUrl = getGasUrl();
+      if (gasUrl) {
+        Promise.all(newContacts.map(c => saveContactToGAS(c))).then(results => {
+          const saved = results.filter(Boolean).length;
+          if (saved > 0) showToast(`☁️ Sheetsに保存しました`);
+          else showToast('⚠️ Sheets保存失敗（ローカルには保存済み）');
+        });
+      }
+    }
 
-// ==================== MEMO ====================
-async function saveMemo() {
-  const txt = document.getElementById('new-memo-text').value.trim();
-  if(!txt) return;
-  const today = new Date().toISOString().split('T')[0];
-  currentContact.memos.unshift({date:today, text:txt});
-  const ml = document.getElementById('d-memos');
-  ml.innerHTML = currentContact.memos.map(m=>`<div class="memo-item"><div class="memo-date">${m.date}</div><div class="memo-text">${m.text}</div></div>`).join('');
-  document.getElementById('new-memo-text').value = '';
-  showToast('✅ メモを保存しました');
-  // GASに更新を反映
-  if (getGasUrl()) {
-    const ok = await saveContactToGAS(currentContact);
-    if (ok) showToast('☁️ Sheetsに同期しました');
-  }
-}
+    // ==================== MEMO ====================
+    async function saveMemo() {
+      const txt = document.getElementById('new-memo-text').value.trim();
+      if (!txt) return;
+      const today = new Date().toISOString().split('T')[0];
+      currentContact.memos.unshift({ date: today, text: txt });
+      const ml = document.getElementById('d-memos');
+      ml.innerHTML = currentContact.memos.map(m => `<div class="memo-item"><div class="memo-date">${m.date}</div><div class="memo-text">${m.text}</div></div>`).join('');
+      document.getElementById('new-memo-text').value = '';
+      showToast('✅ メモを保存しました');
+      // GASに更新を反映
+      if (getGasUrl()) {
+        const ok = await saveContactToGAS(currentContact);
+        if (ok) showToast('☁️ Sheetsに同期しました');
+      }
+    }
 
-async function aiMemoOrganize() {
-  const txt = document.getElementById('new-memo-text').value.trim();
-  if(!txt) { showToast('⚠️ メモを入力してください'); return; }
-  const apiKey = localStorage.getItem('cl_api_key');
-  if(!apiKey) { document.getElementById('new-memo-text').value = '（設定画面でAPIキーを入力すると、AIがメモを整理します）\n\n' + txt; return; }
-  showToast('✨ AIがメモを整理中...');
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:`以下の営業メモを、箇条書きを使わず簡潔で読みやすい文章に整理してください。重要なポイントは残してください。\n\n${txt}`}]})
-    });
-    const d = await res.json();
-    document.getElementById('new-memo-text').value = d.content[0].text;
-    showToast('✅ 整理しました');
-  } catch(e) { showToast('❌ エラーが発生しました'); }
-}
+    async function aiMemoOrganize() {
+      const txt = document.getElementById('new-memo-text').value.trim();
+      if (!txt) { showToast('⚠️ メモを入力してください'); return; }
+      const apiKey = localStorage.getItem('cl_api_key');
+      if (!apiKey) { document.getElementById('new-memo-text').value = '（設定画面でAPIキーを入力すると、AIがメモを整理します）\n\n' + txt; return; }
+      showToast('✨ AIがメモを整理中...');
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 500, messages: [{ role: 'user', content: `以下の営業メモを、箇条書きを使わず簡潔で読みやすい文章に整理してください。重要なポイントは残してください。\n\n${txt}` }] })
+        });
+        const d = await res.json();
+        document.getElementById('new-memo-text').value = d.content[0].text;
+        showToast('✅ 整理しました');
+      } catch (e) { showToast('❌ エラーが発生しました'); }
+    }
 
-// ==================== MAIL ====================
-function updateMailTarget(c) {
-  document.getElementById('mail-av').textContent = c.initial;
-  document.getElementById('mail-av').className = 'avatar ' + c.av;
-  document.getElementById('mail-target-name').textContent = c.name;
-  document.getElementById('mail-target-company').textContent = c.company;
-}
+    // ==================== MAIL ====================
+    function updateMailTarget(c) {
+      document.getElementById('mail-av').textContent = c.initial;
+      document.getElementById('mail-av').className = 'avatar ' + c.av;
+      document.getElementById('mail-target-name').textContent = c.name;
+      document.getElementById('mail-target-company').textContent = c.company;
+    }
 
-function selectMailType(el, type) {
-  document.querySelectorAll('.mail-type-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedMailType = type;
-}
+    function selectMailType(el, type) {
+      document.querySelectorAll('.mail-type-btn').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedMailType = type;
+    }
 
-function pickContact() {
-  showToast('👆 名簿一覧から選択してください（実装予定）');
-}
+    function pickContact() {
+      showToast('👆 名簿一覧から選択してください（実装予定）');
+    }
 
-const MAIL_TEMPLATES = {
-  thanks: { subject:'先日はありがとうございました', label:'お礼' },
-  sales: { subject:'弊社サービスのご提案', label:'営業' },
-  meeting: { subject:'ミーティング日程のご相談', label:'日程調整' },
-  followup: { subject:'先日のご連絡の件', label:'フォロー' },
-};
+    const MAIL_TEMPLATES = {
+      thanks: { subject: '先日はありがとうございました', label: 'お礼' },
+      sales: { subject: '弊社サービスのご提案', label: '営業' },
+      meeting: { subject: 'ミーティング日程のご相談', label: '日程調整' },
+      followup: { subject: '先日のご連絡の件', label: 'フォロー' },
+    };
 
-async function generateMail() {
-  const c = currentContact;
-  const prompt = document.getElementById('mail-prompt').value;
-  const tmpl = MAIL_TEMPLATES[selectedMailType];
-  const apiKey = localStorage.getItem('cl_api_key');
-  const memoText = c.memos.map(m=>`[${m.date}] ${m.text}`).join('\n');
+    async function generateMail() {
+      const c = currentContact;
+      const prompt = document.getElementById('mail-prompt').value;
+      const tmpl = MAIL_TEMPLATES[selectedMailType];
+      const apiKey = localStorage.getItem('cl_api_key');
+      const memoText = c.memos.map(m => `[${m.date}] ${m.text}`).join('\n');
 
-  document.getElementById('generated-mail').classList.add('visible');
-  document.getElementById('mail-subject').textContent = '生成中...';
-  document.getElementById('mail-body').textContent = '';
+      document.getElementById('generated-mail').classList.add('visible');
+      document.getElementById('mail-subject').textContent = '生成中...';
+      document.getElementById('mail-body').textContent = '';
 
-  if(!apiKey) {
-    await new Promise(r=>setTimeout(r,1000));
-    document.getElementById('mail-subject').textContent = `【${tmpl.label}】${tmpl.subject}`;
-    document.getElementById('mail-body').textContent = `${c.name} ${c.position}様\n\nお世話になっております。\n先日は貴重なお時間をいただきありがとうございました。\n\n※ APIキーを設定すると、名簿情報・メモを元にパーソナライズされたメールが生成されます。\n\nよろしくお願いいたします。`;
-    return;
-  }
+      if (!apiKey) {
+        await new Promise(r => setTimeout(r, 1000));
+        document.getElementById('mail-subject').textContent = `【${tmpl.label}】${tmpl.subject}`;
+        document.getElementById('mail-body').textContent = `${c.name} ${c.position}様\n\nお世話になっております。\n先日は貴重なお時間をいただきありがとうございました。\n\n※ APIキーを設定すると、名簿情報・メモを元にパーソナライズされたメールが生成されます。\n\nよろしくお願いいたします。`;
+        return;
+      }
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-haiku-4-5-20251001',
-        max_tokens:800,
-        messages:[{role:'user',content:`以下の情報を元に${tmpl.label}メールを日本語で作成してください。
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 800,
+            messages: [{
+              role: 'user', content: `以下の情報を元に${tmpl.label}メールを日本語で作成してください。
 
 【送信相手】
 氏名: ${c.name}
@@ -1291,127 +2024,128 @@ ${prompt || 'なし'}
 件名: (件名)
 ---
 (本文)`}]
-      })
-    });
-    const d = await res.json();
-    const text = d.content[0].text;
-    const [subjectLine, ...bodyLines] = text.split('\n---\n');
-    document.getElementById('mail-subject').textContent = subjectLine.replace('件名:','').trim();
-    document.getElementById('mail-body').textContent = bodyLines.join('\n---\n').trim();
-    showToast('✅ メールを生成しました');
-  } catch(e) {
-    document.getElementById('mail-body').textContent = 'エラーが発生しました。APIキーを確認してください。';
-  }
-}
-
-function copyMail() {
-  const subj = document.getElementById('mail-subject').textContent;
-  const body = document.getElementById('mail-body').textContent;
-  navigator.clipboard.writeText(`件名: ${subj}\n\n${body}`).then(()=>showToast('📋 コピーしました'));
-}
-
-// ==================== SETTINGS ====================
-function saveSettings() {
-  localStorage.setItem('cl_api_key', document.getElementById('api-key-input').value);
-  localStorage.setItem('cl_sheet_id', document.getElementById('sheet-id-input').value);
-  localStorage.setItem('cl_gas_url', document.getElementById('gas-url-input').value);
-  localStorage.setItem('cl_my_name', document.getElementById('my-name-input').value);
-  localStorage.setItem('cl_my_company', document.getElementById('my-company-input').value);
-  updateSettingStatus();
-}
-
-function loadSettings() {
-  document.getElementById('api-key-input').value = localStorage.getItem('cl_api_key') || '';
-  document.getElementById('sheet-id-input').value = localStorage.getItem('cl_sheet_id') || '';
-  document.getElementById('gas-url-input').value = localStorage.getItem('cl_gas_url') || '';
-  document.getElementById('my-name-input').value = localStorage.getItem('cl_my_name') || '';
-  document.getElementById('my-company-input').value = localStorage.getItem('cl_my_company') || '';
-  updateSettingStatus();
-}
-
-function updateSettingStatus() {
-  const key = localStorage.getItem('cl_api_key');
-  const sheet = localStorage.getItem('cl_sheet_id');
-  const dot1 = document.getElementById('api-status-dot');
-  const txt1 = document.getElementById('api-status-text');
-  const dot2 = document.getElementById('sheet-status-dot');
-  const txt2 = document.getElementById('sheet-status-text');
-  if(key && key.startsWith('sk-')) { dot1.className='status-dot ok'; txt1.textContent='設定済み'; txt1.style.color='var(--accent)'; }
-  else { dot1.className='status-dot idle'; txt1.textContent='未設定'; txt1.style.color='var(--text-dim)'; }
-  if(sheet) { dot2.className='status-dot ok'; txt2.textContent='設定済み'; txt2.style.color='var(--accent)'; }
-  else { dot2.className='status-dot idle'; txt2.textContent='未設定'; txt2.style.color='var(--text-dim)'; }
-}
-
-async function testConnection() {
-  const gasUrl = getGasUrl();
-  const apiKey = localStorage.getItem('cl_api_key');
-
-  if (!gasUrl && !apiKey) {
-    showToast('⚠️ APIキーまたはGAS URLを入力してください');
-    return;
-  }
-
-  showToast('🔄 接続テスト中...');
-
-  // GAS接続テスト
-  if (gasUrl) {
-    try {
-      const res = await fetch(gasUrl + '?action=list');
-      const data = await res.json();
-      if (data.ok) {
-        const dot = document.getElementById('sheet-status-dot');
-        const txt = document.getElementById('sheet-status-text');
-        dot.className = 'status-dot ok';
-        txt.textContent = `接続OK（${data.contacts.length}件）`;
-        txt.style.color = 'var(--accent)';
-        showToast(`✅ Sheets接続成功（${data.contacts.length}件のデータ）`);
-        // データを反映
-        contacts = data.contacts.map(c => enrichContact(c));
-        renderContacts(contacts);
-        gasLoaded = true;
-      } else {
-        throw new Error(data.error);
+          })
+        });
+        const d = await res.json();
+        const text = d.content[0].text;
+        const [subjectLine, ...bodyLines] = text.split('\n---\n');
+        document.getElementById('mail-subject').textContent = subjectLine.replace('件名:', '').trim();
+        document.getElementById('mail-body').textContent = bodyLines.join('\n---\n').trim();
+        showToast('✅ メールを生成しました');
+      } catch (e) {
+        document.getElementById('mail-body').textContent = 'エラーが発生しました。APIキーを確認してください。';
       }
-    } catch(e) {
-      const dot = document.getElementById('sheet-status-dot');
-      const txt = document.getElementById('sheet-status-text');
-      dot.className = 'status-dot err';
-      txt.textContent = 'エラー: ' + e.message;
-      txt.style.color = 'var(--danger)';
-      showToast('❌ Sheets接続エラー: ' + e.message);
     }
-  }
-}
 
-// ==================== TOAST ====================
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2500);
-}
-
-// ==================== INIT ====================
-async function init() {
-  loadSettings();
-  const gasUrl = getGasUrl();
-  if (gasUrl) {
-    showToast('☁️ Sheetsからデータを読み込み中...');
-    const ok = await loadContactsFromGAS();
-    if (ok) {
-      showToast(`✅ ${contacts.length}件を読み込みました`);
-    } else {
-      showToast('⚠️ Sheets接続失敗 — デモデータを表示中');
-      contacts = [...DEMO_CONTACTS];
+    function copyMail() {
+      const subj = document.getElementById('mail-subject').textContent;
+      const body = document.getElementById('mail-body').textContent;
+      navigator.clipboard.writeText(`件名: ${subj}\n\n${body}`).then(() => showToast('📋 コピーしました'));
     }
-  } else {
-    contacts = [...DEMO_CONTACTS];
-  }
-  currentContact = contacts[0] || null;
-  renderContacts(contacts);
-}
 
-init();
-</script>
+    // ==================== SETTINGS ====================
+    function saveSettings() {
+      localStorage.setItem('cl_api_key', document.getElementById('api-key-input').value);
+      localStorage.setItem('cl_sheet_id', document.getElementById('sheet-id-input').value);
+      localStorage.setItem('cl_gas_url', document.getElementById('gas-url-input').value);
+      localStorage.setItem('cl_my_name', document.getElementById('my-name-input').value);
+      localStorage.setItem('cl_my_company', document.getElementById('my-company-input').value);
+      updateSettingStatus();
+    }
+
+    function loadSettings() {
+      document.getElementById('api-key-input').value = localStorage.getItem('cl_api_key') || '';
+      document.getElementById('sheet-id-input').value = localStorage.getItem('cl_sheet_id') || '';
+      document.getElementById('gas-url-input').value = localStorage.getItem('cl_gas_url') || '';
+      document.getElementById('my-name-input').value = localStorage.getItem('cl_my_name') || '';
+      document.getElementById('my-company-input').value = localStorage.getItem('cl_my_company') || '';
+      updateSettingStatus();
+    }
+
+    function updateSettingStatus() {
+      const key = localStorage.getItem('cl_api_key');
+      const sheet = localStorage.getItem('cl_sheet_id');
+      const dot1 = document.getElementById('api-status-dot');
+      const txt1 = document.getElementById('api-status-text');
+      const dot2 = document.getElementById('sheet-status-dot');
+      const txt2 = document.getElementById('sheet-status-text');
+      if (key && key.startsWith('sk-')) { dot1.className = 'status-dot ok'; txt1.textContent = '設定済み'; txt1.style.color = 'var(--accent)'; }
+      else { dot1.className = 'status-dot idle'; txt1.textContent = '未設定'; txt1.style.color = 'var(--text-dim)'; }
+      if (sheet) { dot2.className = 'status-dot ok'; txt2.textContent = '設定済み'; txt2.style.color = 'var(--accent)'; }
+      else { dot2.className = 'status-dot idle'; txt2.textContent = '未設定'; txt2.style.color = 'var(--text-dim)'; }
+    }
+
+    async function testConnection() {
+      const gasUrl = getGasUrl();
+      const apiKey = localStorage.getItem('cl_api_key');
+
+      if (!gasUrl && !apiKey) {
+        showToast('⚠️ APIキーまたはGAS URLを入力してください');
+        return;
+      }
+
+      showToast('🔄 接続テスト中...');
+
+      // GAS接続テスト
+      if (gasUrl) {
+        try {
+          const res = await fetch(gasUrl + '?action=list');
+          const data = await res.json();
+          if (data.ok) {
+            const dot = document.getElementById('sheet-status-dot');
+            const txt = document.getElementById('sheet-status-text');
+            dot.className = 'status-dot ok';
+            txt.textContent = `接続OK（${data.contacts.length}件）`;
+            txt.style.color = 'var(--accent)';
+            showToast(`✅ Sheets接続成功（${data.contacts.length}件のデータ）`);
+            // データを反映
+            contacts = data.contacts.map(c => enrichContact(c));
+            renderContacts(contacts);
+            gasLoaded = true;
+          } else {
+            throw new Error(data.error);
+          }
+        } catch (e) {
+          const dot = document.getElementById('sheet-status-dot');
+          const txt = document.getElementById('sheet-status-text');
+          dot.className = 'status-dot err';
+          txt.textContent = 'エラー: ' + e.message;
+          txt.style.color = 'var(--danger)';
+          showToast('❌ Sheets接続エラー: ' + e.message);
+        }
+      }
+    }
+
+    // ==================== TOAST ====================
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ==================== INIT ====================
+    async function init() {
+      loadSettings();
+      const gasUrl = getGasUrl();
+      if (gasUrl) {
+        showToast('☁️ Sheetsからデータを読み込み中...');
+        const ok = await loadContactsFromGAS();
+        if (ok) {
+          showToast(`✅ ${contacts.length}件を読み込みました`);
+        } else {
+          showToast('⚠️ Sheets接続失敗 — デモデータを表示中');
+          contacts = [...DEMO_CONTACTS];
+        }
+      } else {
+        contacts = [...DEMO_CONTACTS];
+      }
+      currentContact = contacts[0] || null;
+      renderContacts(contacts);
+    }
+
+    init();
+  </script>
 </body>
+
 </html>
