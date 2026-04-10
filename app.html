@@ -927,7 +927,7 @@ function renderContacts(list) {
   const el = document.getElementById('contact-list');
   if(!list.length) { el.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px">該当する連絡先がありません</div>'; return; }
   el.innerHTML = list.map(c => `
-    <div class="contact-card" onclick="openDetail(${c.id})">
+    <div class="contact-card" onclick="openDetail('${c.id}')">
       <div class="avatar ${c.av}">${c.initial}</div>
       <div class="contact-info">
         <div class="contact-name">${c.name}</div>
@@ -960,7 +960,7 @@ function filterTag(el, tag) {
 }
 
 function openDetail(id) {
-  currentContact = contacts.find(c => c.id === id);
+  currentContact = contacts.find(c => String(c.id) === String(id));
   const c = currentContact;
   document.getElementById('d-avatar').textContent = c.initial;
   document.getElementById('d-avatar').className = 'detail-avatar';
