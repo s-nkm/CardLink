@@ -833,10 +833,83 @@ const DEMO_CONTACTS = [
   { id:4, name:'高橋 さやか', position:'事業開発', company:'FinanceNext Inc.', email:'takahashi@financenext.com', tel:'090-3333-4444', web:'financenext.com', venue:'大手町 / 個別訪問', tag:'金融', heat:'', date:'3/15', initial:'高', av:'av-red', memos:[] },
 ];
 
-let contacts = [...DEMO_CONTACTS];
-let currentContact = contacts[0];
+let contacts = [];
+let currentContact = null;
 let selectedMailType = 'thanks';
 let settings = {};
+let gasLoaded = false; // GASからデータ取得済みかどうか
+
+// ==================== GAS API ====================
+function getGasUrl() { return localStorage.getItem('cl_gas_url') || ''; }
+
+// GASから全連絡先を取得してcontactsに反映
+async function loadContactsFromGAS() {
+  const gasUrl = getGasUrl();
+  if (!gasUrl) return false;
+  try {
+    const res = await fetch(gasUrl + '?action=list');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    // GASデータをUI向けに変換
+    contacts = data.contacts.map(c => enrichContact(c));
+    gasLoaded = true;
+    return true;
+  } catch(e) {
+    console.warn('GAS load failed:', e);
+    return false;
+  }
+}
+
+// GASへのPOST共通関数
+// Content-Type: text/plain でpreflightを回避（GAS CORS対策）
+async function gasPost(payload) {
+  const gasUrl = getGasUrl();
+  if (!gasUrl) return { ok: false, error: 'GAS URL未設定' };
+  const res = await fetch(gasUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload),
+    redirect: 'follow'
+  });
+  return res.json();
+}
+
+// 連絡先をGASに保存（新規 or 更新）
+async function saveContactToGAS(contact) {
+  try {
+    const data = await gasPost({ action: 'upsert', contact });
+    return data.ok;
+  } catch(e) {
+    console.warn('GAS save failed:', e);
+    return false;
+  }
+}
+
+// 連絡先をGASから削除
+async function deleteContactFromGAS(id) {
+  if (!getGasUrl()) return false;
+  try {
+    const data = await gasPost({ action: 'delete', id: String(id) });
+    return data.ok;
+  } catch(e) {
+    console.warn('GAS delete failed:', e);
+    return false;
+  }
+}
+
+// GAS生データをUI表示用に補完
+function enrichContact(c) {
+  const avColors = ['av-green','av-blue','av-orange','av-red'];
+  const existing = contacts.find(ex => String(ex.id) === String(c.id));
+  return {
+    ...c,
+    id: c.id,
+    initial: c.name ? c.name[0] : '?',
+    av: existing ? existing.av : avColors[Math.floor(Math.random() * 4)],
+    date: c.created_at ? c.created_at.replace(/^\d{4}-/, '').replace('-', '/') : '-',
+    memos: Array.isArray(c.memos) ? c.memos : []
+  };
+}
 
 // ==================== NAVIGATION ====================
 function showPage(name) {
@@ -1003,7 +1076,7 @@ async function callClaudeOCR(apiKey) {
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
     body: JSON.stringify({
       model:'claude-haiku-4-5-20251001',
       max_tokens:1000,
@@ -1062,17 +1135,18 @@ function acceptSuggest() {
   document.getElementById('location-suggest').style.opacity = '0.5';
 }
 
-function saveAll() {
+async function saveAll() {
   const cards = document.querySelectorAll('#result-cards-container .result-card');
   const newContacts = [];
-  cards.forEach(card => {
+  const avColors = ['av-green','av-blue','av-orange','av-red'];
+  cards.forEach((card, idx) => {
     const inputs = card.querySelectorAll('.form-input');
     const obj = {};
     inputs.forEach(i => obj[i.dataset.key] = i.value);
     const suggest = document.getElementById('suggest-place').textContent + ' / ' + document.getElementById('suggest-event').textContent;
-    const av = ['av-green','av-blue','av-orange','av-red'][contacts.length % 4];
+    const today = new Date().toISOString().split('T')[0];
     newContacts.push({
-      id: Date.now() + Math.random(),
+      id: String(Date.now()) + String(idx),
       name: obj.name || '未入力',
       position: obj.position || '',
       company: obj.company || '',
@@ -1082,20 +1156,32 @@ function saveAll() {
       venue: suggest,
       tag: '展示会',
       heat: 'warm',
-      date: new Date().toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}),
+      created_at: today,
+      date: today.replace(/^\d{4}-/, '').replace('-', '/'),
       initial: (obj.name||'？')[0],
-      av,
+      av: avColors[contacts.length % 4],
       memos: []
     });
   });
+
   contacts = [...newContacts, ...contacts];
   renderContacts(contacts);
   showToast(`✅ ${newContacts.length}件を登録しました`);
   setTimeout(() => showPage('home'), 1200);
+
+  // GASにバックグラウンド保存
+  const gasUrl = getGasUrl();
+  if (gasUrl) {
+    showToast('☁️ Sheetsに保存中...');
+    const results = await Promise.all(newContacts.map(c => saveContactToGAS(c)));
+    const saved = results.filter(Boolean).length;
+    if (saved > 0) showToast(`☁️ ${saved}件をSheetsに保存しました`);
+    else showToast('⚠️ Sheets保存に失敗しました（ローカルには保存済み）');
+  }
 }
 
 // ==================== MEMO ====================
-function saveMemo() {
+async function saveMemo() {
   const txt = document.getElementById('new-memo-text').value.trim();
   if(!txt) return;
   const today = new Date().toISOString().split('T')[0];
@@ -1104,6 +1190,11 @@ function saveMemo() {
   ml.innerHTML = currentContact.memos.map(m=>`<div class="memo-item"><div class="memo-date">${m.date}</div><div class="memo-text">${m.text}</div></div>`).join('');
   document.getElementById('new-memo-text').value = '';
   showToast('✅ メモを保存しました');
+  // GASに更新を反映
+  if (getGasUrl()) {
+    const ok = await saveContactToGAS(currentContact);
+    if (ok) showToast('☁️ Sheetsに同期しました');
+  }
 }
 
 async function aiMemoOrganize() {
@@ -1115,7 +1206,7 @@ async function aiMemoOrganize() {
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:`以下の営業メモを、箇条書きを使わず簡潔で読みやすい文章に整理してください。重要なポイントは残してください。\n\n${txt}`}]})
     });
     const d = await res.json();
@@ -1170,7 +1261,7 @@ async function generateMail() {
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:800,
@@ -1243,9 +1334,45 @@ function updateSettingStatus() {
   else { dot2.className='status-dot idle'; txt2.textContent='未設定'; txt2.style.color='var(--text-dim)'; }
 }
 
-function testConnection() {
+async function testConnection() {
+  const gasUrl = getGasUrl();
+  const apiKey = localStorage.getItem('cl_api_key');
+
+  if (!gasUrl && !apiKey) {
+    showToast('⚠️ APIキーまたはGAS URLを入力してください');
+    return;
+  }
+
   showToast('🔄 接続テスト中...');
-  setTimeout(()=>showToast('✅ 接続成功（デモ）'), 1500);
+
+  // GAS接続テスト
+  if (gasUrl) {
+    try {
+      const res = await fetch(gasUrl + '?action=list');
+      const data = await res.json();
+      if (data.ok) {
+        const dot = document.getElementById('sheet-status-dot');
+        const txt = document.getElementById('sheet-status-text');
+        dot.className = 'status-dot ok';
+        txt.textContent = `接続OK（${data.contacts.length}件）`;
+        txt.style.color = 'var(--accent)';
+        showToast(`✅ Sheets接続成功（${data.contacts.length}件のデータ）`);
+        // データを反映
+        contacts = data.contacts.map(c => enrichContact(c));
+        renderContacts(contacts);
+        gasLoaded = true;
+      } else {
+        throw new Error(data.error);
+      }
+    } catch(e) {
+      const dot = document.getElementById('sheet-status-dot');
+      const txt = document.getElementById('sheet-status-text');
+      dot.className = 'status-dot err';
+      txt.textContent = 'エラー: ' + e.message;
+      txt.style.color = 'var(--danger)';
+      showToast('❌ Sheets接続エラー: ' + e.message);
+    }
+  }
 }
 
 // ==================== TOAST ====================
@@ -1257,8 +1384,26 @@ function showToast(msg) {
 }
 
 // ==================== INIT ====================
-renderContacts(contacts);
-loadSettings();
+async function init() {
+  loadSettings();
+  const gasUrl = getGasUrl();
+  if (gasUrl) {
+    showToast('☁️ Sheetsからデータを読み込み中...');
+    const ok = await loadContactsFromGAS();
+    if (ok) {
+      showToast(`✅ ${contacts.length}件を読み込みました`);
+    } else {
+      showToast('⚠️ Sheets接続失敗 — デモデータを表示中');
+      contacts = [...DEMO_CONTACTS];
+    }
+  } else {
+    contacts = [...DEMO_CONTACTS];
+  }
+  currentContact = contacts[0] || null;
+  renderContacts(contacts);
+}
+
+init();
 </script>
 </body>
 </html>
